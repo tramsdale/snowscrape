@@ -1,0 +1,15 @@
+{
+  "saved_tables": [
+    "out_snow/table_1.csv",
+    "out_snow/table_2.csv",
+    "out_snow/table_3.csv"
+  ],
+  "summary": {
+    "snow_summary_csv": "out_snow/snow_summary.csv",
+    "snow_summary_json": "out_snow/snow_summary.json",
+    "dynamic_forecast_csv": "out_snow/dynamic_forecast.csv",
+    "dynamic_forecast_json": "out_snow/dynamic_forecast.json",
+    "hourly_forecast_csv": "out_snow/hourly_forecast.csv",
+    "hourly_forecast_json": "out_snow/hourly_forecast.json"
+  }
+}
