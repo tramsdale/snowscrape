@@ -6,12 +6,19 @@ Serves snow forecast data as JSON API endpoints
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import json
 import uvicorn
+import os
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+from dotenv import load_dotenv
+from bs4 import BeautifulSoup
+
+# Load environment variables
+load_dotenv()
 
 app = FastAPI(
     title="Snow Forecast API",
@@ -31,6 +38,10 @@ app.add_middleware(
 # Configuration
 DATA_DIR = Path("out_snow")
 LOG_DIR = Path("logs")
+STATIC_DIR = Path("static")
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 def load_json_file(filename: str) -> Dict[str, Any]:
     """Load JSON file from data directory"""
@@ -67,7 +78,9 @@ async def root():
         "endpoints": {
             "/meta": "Scraper metadata and file list",
             "/forecast/dynamic": "Dynamic forecast data",
-            "/forecast/hourly": "Hourly forecast data", 
+            "/forecast/hourly": "Hourly forecast data",
+            "/forecast/html": "Beautiful HTML forecast with ski theme",
+            "/forecast/generate": "Generate HTML/Markdown ski forecast using ChatGPT",
             "/snow/summary": "Snow summary data",
             "/health": "API health check",
             "/files": "List all available files",
@@ -101,6 +114,329 @@ async def get_dynamic_forecast():
 async def get_hourly_forecast():
     """Get hourly forecast data"""
     return load_json_file("hourly_forecast.json")
+
+@app.get("/forecast/html", response_class=HTMLResponse)
+async def get_html_forecast():
+    """Get beautifully styled HTML forecast featuring ChatGPT analysis"""
+    try:
+        # Load the hourly forecast data
+        hourly_data = load_json_file("hourly_forecast.json")
+        
+        # Try to get cached ChatGPT forecast first
+        chatgpt_forecast = get_cached_or_generate_forecast(hourly_data)
+        
+        # Create beautiful ski-themed HTML with ChatGPT as the star
+        html_content = create_ski_themed_forecast_html(hourly_data, chatgpt_forecast)
+        
+        return HTMLResponse(content=html_content)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating HTML forecast: {str(e)}")
+
+
+def get_cached_or_generate_forecast(hourly_data: List[Dict]) -> str:
+    """Get cached forecast if recent, otherwise generate new one"""
+    # Check for recent cached forecast
+    cached_forecast = get_recent_cached_forecast()
+    if cached_forecast:
+        print("✅ Using cached ChatGPT forecast (less than 1 hour old)")
+        return cached_forecast
+    
+    # Generate new forecast
+    print("🤖 Generating new ChatGPT forecast...")
+    try:
+        # Import the forecast generator
+        from src.snowscrape.forecast_generator import SkiForecastGenerator
+        
+        # Check if OpenAI API key is available
+        api_key = os.getenv('OPENAI_API_KEY')
+        if api_key:
+            generator = SkiForecastGenerator(openai_api_key=api_key)
+            if generator.client:
+                forecasts = generator.generate_forecast_with_chatgpt(hourly_data)
+                if forecasts:
+                    return forecasts.get('html', '')
+    except Exception as e:
+        print(f"Could not generate ChatGPT forecast: {e}")
+    
+    return None
+
+
+def get_recent_cached_forecast() -> str:
+    """Check for recent cached forecast files (within last hour)"""
+    try:
+        forecasts_dir = Path("generated_forecasts")
+        if not forecasts_dir.exists():
+            return None
+        
+        # Find the most recent HTML forecast file
+        html_files = list(forecasts_dir.glob("ski_forecast_*.html"))
+        if not html_files:
+            return None
+        
+        # Sort by modification time (most recent first)
+        html_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        latest_file = html_files[0]
+        
+        # Check if file is less than 1 hour old
+        file_time = datetime.fromtimestamp(latest_file.stat().st_mtime)
+        current_time = datetime.now()
+        time_diff = current_time - file_time
+        
+        if time_diff.total_seconds() < 3600:  # 1 hour = 3600 seconds
+            print(f"📁 Found recent forecast: {latest_file.name} "
+                  f"({int(time_diff.total_seconds() / 60)} minutes old)")
+            
+            # Read and return the cached forecast content
+            with open(latest_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+                
+            # Extract just the forecast content (remove HTML wrapper if present)
+            if '<div class="forecast">' in content:
+                start = content.find('<div class="forecast">') + len('<div class="forecast">')
+                end = content.find('</div>', start)
+                if end > start:
+                    return content[start:end].strip()
+            
+            return content
+        else:
+            print(f"🕐 Latest forecast is {int(time_diff.total_seconds() / 60)} minutes old - generating new one")
+            return None
+            
+    except Exception as e:
+        print(f"Error checking cached forecasts: {e}")
+        return None
+
+
+def get_cache_timestamp_info() -> str:
+    """Get timestamp info for the most recent cached forecast"""
+    try:
+        forecasts_dir = Path("generated_forecasts")
+        if not forecasts_dir.exists():
+            return ""
+        
+        html_files = list(forecasts_dir.glob("ski_forecast_*.html"))
+        if not html_files:
+            return ""
+        
+        html_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+        latest_file = html_files[0]
+        
+        file_time = datetime.fromtimestamp(latest_file.stat().st_mtime)
+        current_time = datetime.now()
+        time_diff = current_time - file_time
+        
+        minutes_old = int(time_diff.total_seconds() / 60)
+        if minutes_old < 1:
+            return "< 1 min ago"
+        elif minutes_old < 60:
+            return f"{minutes_old} min ago"
+        else:
+            hours = int(minutes_old / 60)
+            return f"{hours}h {minutes_old % 60}m ago"
+            
+    except Exception:
+        return ""
+
+def create_ski_themed_forecast_html(hourly_data: List[Dict], 
+                                   chatgpt_forecast: str = None) -> str:
+    """Create a beautiful ski-themed HTML forecast"""
+    
+    # Extract snow events
+    snow_events = [period for period in hourly_data 
+                  if period.get('snow_amount') and period['snow_amount'] != '—']
+    rain_events = [period for period in hourly_data 
+                  if period.get('rain_amount') and period['rain_amount'] != '—']
+    
+    # Generate HTML with external CSS
+    html = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>🎿 Avoriaz Snow Forecast</title>
+        <link rel="stylesheet" href="/static/ski-forecast.css">
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🎿 Avoriaz Snow Forecast ⛷️</h1>
+                <div class="subtitle">AI-Powered Ski Forecast Analysis</div>
+            </div>
+    """
+    
+    # Add ChatGPT forecast as the main feature
+    if chatgpt_forecast:
+        # Check if we're using cached content by looking for recent files
+        cache_info = get_cache_timestamp_info()
+        cache_note = f" (cached {cache_info})" if cache_info else ""
+        
+        html += f"""
+            <div class="forecast-card" style="margin-bottom: 30px; border-left: 5px solid #e74c3c;">
+                <div class="card-title">
+                    🤖 Expert AI Ski Forecast Analysis{cache_note}
+                </div>
+                <div style="line-height: 1.6; font-size: 1.1em;">
+                    {chatgpt_forecast}
+                </div>
+            </div>
+        """
+    else:
+        html += """
+            <div class="forecast-card" style="margin-bottom: 30px; border-left: 5px solid #f39c12; background: linear-gradient(135deg, #fef9e7 0%, #fcf3cf 100%);">
+                <div class="card-title">
+                    ⚠️ AI Forecast Unavailable
+                </div>
+                <div style="line-height: 1.6;">
+                    <p>The AI-powered forecast analysis is currently unavailable. This could be due to:</p>
+                    <ul>
+                        <li>Missing OpenAI API key configuration</li>
+                        <li>API service temporarily unavailable</li>
+                        <li>Rate limiting or quota exceeded</li>
+                    </ul>
+                    <p>You can still view the detailed data analysis below.</p>
+                </div>
+            </div>
+        """
+    
+    html += """
+            <div class="forecast-grid">
+                <div class="forecast-card" style="grid-column: 1 / -1; border-left: 5px solid #3498db;">
+                    <div class="card-title">
+                        ❄️🌧️ Precipitation Events Summary
+                    </div>
+    """
+    
+    # Combine snow and rain events with clear dates
+    all_precipitation = []
+    
+    # Add snow events
+    for event in snow_events:
+        date_str = f"{event.get('day_name', '')} {event.get('day_num', '')} Nov"
+        all_precipitation.append({
+            'date': date_str,
+            'time': event.get('time_period', ''),
+            'type': 'Snow',
+            'amount': f"{event.get('snow_amount', '')}cm",
+            'description': event.get('weather_phrase', ''),
+            'sort_key': f"{event.get('date', '')}-{event.get('period_index', 0):03d}"
+        })
+    
+    # Add rain events
+    for event in rain_events:
+        date_str = f"{event.get('day_name', '')} {event.get('day_num', '')} Nov"
+        all_precipitation.append({
+            'date': date_str,
+            'time': event.get('time_period', ''),
+            'type': 'Rain',
+            'amount': f"{event.get('rain_amount', '')}mm",
+            'description': event.get('weather_phrase', ''),
+            'sort_key': f"{event.get('date', '')}-{event.get('period_index', 0):03d}"
+        })
+    
+    # Sort by date and time
+    all_precipitation.sort(key=lambda x: x['sort_key'])
+    
+    if all_precipitation:
+        html += """
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; font-size: 0.9em;">
+                            <thead>
+                                <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                    <th style="padding: 8px; text-align: left;">Date</th>
+                                    <th style="padding: 8px; text-align: left;">Time</th>
+                                    <th style="padding: 8px; text-align: left;">Type</th>
+                                    <th style="padding: 8px; text-align: left;">Amount</th>
+                                    <th style="padding: 8px; text-align: left;">Conditions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+        """
+        
+        for event in all_precipitation:
+            type_class = "snow-amount" if event['type'] == 'Snow' else "rain-amount"
+            html += f"""
+                                <tr style="border-bottom: 1px solid rgba(0,0,0,0.1);">
+                                    <td style="padding: 8px; font-weight: bold;">{event['date']}</td>
+                                    <td style="padding: 8px;">{event['time']}</td>
+                                    <td style="padding: 8px;">{event['type']}</td>
+                                    <td style="padding: 8px;" class="{type_class}">{event['amount']}</td>
+                                    <td style="padding: 8px;">{event['description']}</td>
+                                </tr>
+            """
+        
+        html += """
+                            </tbody>
+                        </table>
+                    </div>
+        """
+    else:
+        html += '<div class="weather-item"><div>No precipitation events in forecast period</div></div>'
+    
+    html += """
+                </div>
+            </div>
+            
+            <div class="hourly-table">
+                <h2>📊 Supporting Data: Detailed Hourly Forecast</h2>
+                <div style="overflow-x: auto; max-height: 600px; overflow-y: auto;">
+                    <table>
+                        <thead style="position: sticky; top: 0; z-index: 10;">
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Weather</th>
+                                <th>Snow</th>
+                                <th>Rain</th>
+                                <th>Temp (°C)</th>
+                                <th>Wind</th>
+                                <th>Humidity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    """
+    
+    # Add hourly data rows with clearer dates - show more periods for better detail
+    for period in hourly_data[:40]:  # Show first 40 periods for better coverage
+        snow_display = period.get('snow_amount', '—')
+        if snow_display != '—':
+            snow_display += 'cm'
+            
+        rain_display = period.get('rain_amount', '—')
+        if rain_display != '—':
+            rain_display += 'mm'
+        
+        # Create clear date display with full date
+        date_display = f"{period.get('day_name', '')} {period.get('day_num', '')} Nov"
+        
+        html += f"""
+                        <tr>
+                            <td><strong>{date_display}</strong></td>
+                            <td><strong>{period.get('time_period', '')}</strong></td>
+                            <td>{period.get('weather_phrase', '')}</td>
+                            <td class="snow-amount">{snow_display}</td>
+                            <td class="rain-amount">{rain_display}</td>
+                            <td>{period.get('temperature_max', '—')}°</td>
+                            <td>{period.get('wind_speed_display', '')} {period.get('wind_direction', '')}</td>
+                            <td>{period.get('humidity', '')}%</td>
+                        </tr>
+        """
+    
+    html += f"""
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="timestamp">
+                Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return html
 
 @app.get("/snow/summary")
 async def get_snow_summary():
@@ -147,6 +483,77 @@ async def download_file(filename: str):
         filename=filename,
         media_type='application/octet-stream'
     )
+
+
+@app.get("/forecast/generate")
+async def generate_ski_forecast():
+    """Generate HTML and Markdown ski forecast using ChatGPT"""
+    try:
+        # Import the forecast generator
+        from src.snowscrape.forecast_generator import SkiForecastGenerator
+        
+        # Check if OpenAI API key is available
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            raise HTTPException(
+                status_code=500, 
+                detail="OpenAI API key not configured. Set OPENAI_API_KEY environment variable."
+            )
+        
+        # Create generator
+        generator = SkiForecastGenerator(openai_api_key=api_key)
+        
+        if not generator.client:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to initialize OpenAI client"
+            )
+        
+        # Check if hourly forecast data exists
+        hourly_file = DATA_DIR / "hourly_forecast.json"
+        if not hourly_file.exists():
+            raise HTTPException(
+                status_code=404,
+                detail="Hourly forecast data not found. Run scraper first."
+            )
+        
+        # Generate forecasts
+        forecasts = generator.generate_forecast(
+            data_dir=str(DATA_DIR),
+            save_output=True
+        )
+        
+        if not forecasts:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate forecasts with ChatGPT"
+            )
+        
+        # Return the generated forecasts
+        return {
+            "status": "success",
+            "message": "Ski forecast generated successfully",
+            "html": forecasts.get('html', ''),
+            "markdown": forecasts.get('markdown', ''),
+            "files": {
+                "html_file": forecasts.get('html_file'),
+                "markdown_file": forecasts.get('markdown_file'),
+                "raw_file": forecasts.get('raw_file')
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except ImportError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Forecast generator module not available: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating forecast: {str(e)}"
+        )
+
 
 @app.get("/logs")
 async def get_recent_logs():
