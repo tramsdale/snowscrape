@@ -78,21 +78,24 @@ class SkiForecastGenerator:
         
         prompt = f"""Using the JSON provided, create a {today_text}Tomorrow, next 7 days ski forecast as HTML and as markdown.
 
-The forecast should start with a brief text/conversational summary of the overall conditions, 
+The forecast should start with a detailed text/conversational summary of the overall conditions, 
 with best likelihood of good skiing and any hazards, split into the sections: 
    {today_text}
    Tomorrow
    Day after Tomorrow
    Next 7 Days
 
-Then include a detailed assessment of the skiing conditions. The forecast should include:
-- Snow and rain amounts
-- General skiing conditions assessment
-- Whether it is likely to be a bluebird day, powder day, icy conditions, etc.
-- Recommendation for outfit and gear based on conditions
-- Any hazards to be aware of (e.g., avalanche risk, visibility issues)
-
-Please format this as a professional ski resort forecast that would be useful for planning skiing activities.
+Each section should include:
+- Day of the week (in the title, and date) - except for the 'Next 7 Days' section which is a summary, although should call out any particularly awesome looking days
+- A conversational summary of the day's skiing conditions. Use engaging and descriptive language suitable for ski enthusiasts planning their activities, but with a fun aspect to it - not too serious or dry.
+- Expected temperature range (high/low in Celsius)
+- Expected snowfall (in cm) and times
+- Wind conditions (speed and direction)
+- Weather conditions (sunny, cloudy, snow, etc)
+- Any special notes for skiers (e.g. avalanche risk, grooming status)
+- Whether conditions are best for groomers, powder, backcountry, etc.
+Use formatted HTML elements (headings, lists, bold text) for the HTML version.
+Use snowsports lingo, like sick, pow, corduroy, bluebird, etc.
 
 Format your response exactly like this:
 ## HTML Version
