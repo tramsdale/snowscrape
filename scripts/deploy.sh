@@ -147,8 +147,51 @@ if [ "$SETUP_CRON" = true ]; then
     fi
 fi
 
-# Start API server
+# Stop existing services before starting new ones
 if [ "$START_API" = true ]; then
+    print_status "Checking for existing services..."
+    
+    # Stop systemd service if it exists
+    if systemctl list-units --full -all | grep -Fq "snowscrape.service"; then
+        print_status "Stopping existing systemd service..."
+        sudo systemctl stop snowscrape.service || print_warning "Failed to stop systemd service"
+    fi
+    
+    # Kill any processes using port 8001
+    PORT_PROCESSES=$(lsof -ti :8001 2>/dev/null || true)
+    if [ -n "$PORT_PROCESSES" ]; then
+        print_status "Stopping processes using port 8001..."
+        echo "$PORT_PROCESSES" | xargs kill -TERM 2>/dev/null || true
+        sleep 2
+        # Force kill if still running
+        PORT_PROCESSES=$(lsof -ti :8001 2>/dev/null || true)
+        if [ -n "$PORT_PROCESSES" ]; then
+            echo "$PORT_PROCESSES" | xargs kill -KILL 2>/dev/null || true
+        fi
+    fi
+    
+    # Kill any existing api_server.py processes
+    API_PIDS=$(pgrep -f "api_server.py" 2>/dev/null || true)
+    if [ -n "$API_PIDS" ]; then
+        print_status "Stopping existing API server processes..."
+        echo "$API_PIDS" | xargs kill -TERM 2>/dev/null || true
+        sleep 2
+        # Force kill if still running
+        API_PIDS=$(pgrep -f "api_server.py" 2>/dev/null || true)
+        if [ -n "$API_PIDS" ]; then
+            echo "$API_PIDS" | xargs kill -KILL 2>/dev/null || true
+        fi
+    fi
+    
+    # Clean up stale PID file
+    if [ -f "logs/api_server.pid" ]; then
+        print_status "Cleaning up stale PID file..."
+        rm -f logs/api_server.pid
+    fi
+    
+    print_success "Existing services stopped"
+    
+    # Start API server
     print_status "Starting API server..."
     if [ -f "scripts/start_api.sh" ]; then
         chmod +x scripts/start_api.sh
@@ -161,11 +204,19 @@ fi
 
 # Create systemd service for production
 if [ "$ENVIRONMENT" = "production" ]; then
-    print_status "Creating systemd service..."
+    print_status "Setting up systemd service..."
     
     SERVICE_NAME="snowscrape"
     SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
     
+    # Stop and disable existing service if it exists
+    if systemctl list-units --full -all | grep -Fq "${SERVICE_NAME}.service"; then
+        print_status "Stopping existing systemd service..."
+        sudo systemctl stop "$SERVICE_NAME" || true
+        sudo systemctl disable "$SERVICE_NAME" || true
+    fi
+    
+    print_status "Creating systemd service..."
     sudo tee "$SERVICE_FILE" > /dev/null <<EOF
 [Unit]
 Description=Snow Scraper API Server
@@ -176,7 +227,7 @@ Type=simple
 User=$(whoami)
 WorkingDirectory=$PROJECT_DIR
 Environment=PATH=$PROJECT_DIR/.venv/bin
-ExecStart=$PROJECT_DIR/.venv/bin/python $PROJECT_DIR/api_server.py
+ExecStart=$PROJECT_DIR/.venv/bin/python $PROJECT_DIR/api_server.py --production
 Restart=always
 RestartSec=10
 
