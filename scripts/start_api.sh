@@ -54,14 +54,9 @@ if [ "$ENVIRONMENT" = "production" ] || [ -f "/etc/systemd/system/snowscrape.ser
     log "Running in production mode"
 fi
 
-# Test the API server first (dry run)
-log "Testing API server configuration..."
-if ! python api_server.py --help >/dev/null 2>&1; then
-    log "ERROR: API server configuration test failed"
-    
-    # Try to get more specific error info
-    log "Checking for missing dependencies..."
-    python -c "
+# Test dependencies and setup
+log "Checking dependencies and setup..."
+python -c "
 import sys
 try:
     import fastapi
@@ -87,15 +82,16 @@ except Exception as e:
     print(f'✗ Directory creation failed: {e}')
     sys.exit(1)
 
-print('Configuration test passed')
+print('✓ Configuration check passed')
 "
-    if [ $? -ne 0 ]; then
-        log "ERROR: Configuration test failed"
-        exit 1
-    fi
+
+if [ $? -ne 0 ]; then
+    log "ERROR: Configuration check failed"
+    exit 1
 fi
 
 # Start the server
+log "Launching API server..."
 nohup python api_server.py $PROD_ARGS > "$LOG_DIR/api_$(date +%Y%m%d).log" 2>&1 &
 API_PID=$!
 
