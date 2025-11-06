@@ -46,7 +46,57 @@ fi
 
 # Start the API server
 log "Starting snow data API server on port 8001..."
-nohup python api_server.py > "$LOG_DIR/api_$(date +%Y%m%d).log" 2>&1 &
+
+# Check if we're in production (look for common production indicators)
+PROD_ARGS=""
+if [ "$ENVIRONMENT" = "production" ] || [ -f "/etc/systemd/system/snowscrape.service" ]; then
+    PROD_ARGS="--production"
+    log "Running in production mode"
+fi
+
+# Test the API server first (dry run)
+log "Testing API server configuration..."
+if ! python api_server.py --help >/dev/null 2>&1; then
+    log "ERROR: API server configuration test failed"
+    
+    # Try to get more specific error info
+    log "Checking for missing dependencies..."
+    python -c "
+import sys
+try:
+    import fastapi
+    print('✓ FastAPI installed')
+except ImportError as e:
+    print(f'✗ FastAPI missing: {e}')
+    sys.exit(1)
+
+try:
+    import uvicorn  
+    print('✓ Uvicorn installed')
+except ImportError as e:
+    print(f'✗ Uvicorn missing: {e}')
+    sys.exit(1)
+
+try:
+    from pathlib import Path
+    Path('out_snow').mkdir(exist_ok=True)
+    Path('static').mkdir(exist_ok=True) 
+    Path('logs').mkdir(exist_ok=True)
+    print('✓ Directories created')
+except Exception as e:
+    print(f'✗ Directory creation failed: {e}')
+    sys.exit(1)
+
+print('Configuration test passed')
+"
+    if [ $? -ne 0 ]; then
+        log "ERROR: Configuration test failed"
+        exit 1
+    fi
+fi
+
+# Start the server
+nohup python api_server.py $PROD_ARGS > "$LOG_DIR/api_$(date +%Y%m%d).log" 2>&1 &
 API_PID=$!
 
 # Save PID

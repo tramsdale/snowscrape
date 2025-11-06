@@ -583,10 +583,32 @@ async def get_recent_logs():
         raise HTTPException(status_code=500, detail=f"Error reading log file: {str(e)}")
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "api_server:app",
-        host="0.0.0.0",
-        port=8001,
-        reload=True,
-        log_level="info"
-    )
+    import sys
+    
+    # Check if running in production (basic check)
+    is_production = "--production" in sys.argv or os.getenv("ENVIRONMENT") == "production"
+    
+    # Ensure required directories exist
+    DATA_DIR.mkdir(exist_ok=True)
+    STATIC_DIR.mkdir(exist_ok=True)
+    LOG_DIR.mkdir(exist_ok=True)
+    
+    # Log startup info
+    print(f"Starting Snow Forecast API server...")
+    print(f"Environment: {'Production' if is_production else 'Development'}")
+    print(f"Data directory: {DATA_DIR.absolute()}")
+    print(f"Static directory: {STATIC_DIR.absolute()}")
+    print(f"Log directory: {LOG_DIR.absolute()}")
+    
+    try:
+        uvicorn.run(
+            "api_server:app",
+            host="0.0.0.0",
+            port=8001,
+            reload=not is_production,  # Disable reload in production
+            log_level="info",
+            access_log=True
+        )
+    except Exception as e:
+        print(f"ERROR: Failed to start API server: {e}")
+        sys.exit(1)
