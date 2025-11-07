@@ -6,7 +6,7 @@ Serves snow forecast data as JSON API endpoints
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import json
@@ -250,17 +250,21 @@ def create_ski_themed_forecast_html(hourly_data: List[Dict],
     
     # Extract snow events
     snow_events = [period for period in hourly_data
-                   if period.get('snow_amount') and 
+                   if period.get('snow_amount') and
                    period['snow_amount'] != '—']
     rain_events = [period for period in hourly_data
                    if period.get('rain_amount') and
                    period['rain_amount'] != '—']
     
-    # Ensure base_url ends with / if not empty
-    if base_url and not base_url.endswith('/'):
-        base_url += '/'
+    # Load CSS content directly to avoid nginx proxy issues
+    css_content = ""
+    try:
+        with open(STATIC_DIR / "ski-forecast.css", "r") as f:
+            css_content = f.read()
+    except Exception as e:
+        print(f"Warning: Could not load CSS file: {e}")
     
-    # Generate HTML with external CSS
+    # Generate HTML with embedded CSS
     html = f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -268,7 +272,9 @@ def create_ski_themed_forecast_html(hourly_data: List[Dict],
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>🎿 Avoriaz Snow Forecast</title>
-        <link rel="stylesheet" href="{base_url}static/ski-forecast.css">
+        <style>
+        {css_content}
+        </style>
     </head>
     <body>
         <div class="container">
@@ -566,6 +572,21 @@ async def generate_ski_forecast():
             detail=f"Error generating forecast: {str(e)}"
         )
 
+
+@app.get("/static/ski-forecast.css")
+async def get_css():
+    """Serve CSS file directly (for nginx proxy compatibility)"""
+    try:
+        css_path = STATIC_DIR / "ski-forecast.css"
+        if css_path.exists():
+            with open(css_path, 'r') as f:
+                css_content = f.read()
+            return Response(content=css_content, media_type="text/css")
+        else:
+            raise HTTPException(status_code=404, detail="CSS file not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, 
+                          detail=f"Error serving CSS: {str(e)}")
 
 @app.get("/logs")
 async def get_recent_logs():
