@@ -157,29 +157,35 @@ if [ "$START_API" = true ]; then
         sudo systemctl stop snowscrape.service || print_warning "Failed to stop systemd service"
     fi
     
-    # Kill any processes using port 8001
+    # Kill any processes using port 8001 (more aggressive)
+    print_status "Checking for processes using port 8001..."
     PORT_PROCESSES=$(lsof -ti :8001 2>/dev/null || true)
     if [ -n "$PORT_PROCESSES" ]; then
-        print_status "Stopping processes using port 8001..."
-        echo "$PORT_PROCESSES" | xargs kill -TERM 2>/dev/null || true
-        sleep 2
+        print_status "Stopping processes using port 8001: $PORT_PROCESSES"
+        echo "$PORT_PROCESSES" | xargs sudo kill -TERM 2>/dev/null || true
+        sleep 3
         # Force kill if still running
         PORT_PROCESSES=$(lsof -ti :8001 2>/dev/null || true)
         if [ -n "$PORT_PROCESSES" ]; then
-            echo "$PORT_PROCESSES" | xargs kill -KILL 2>/dev/null || true
+            print_status "Force killing stubborn processes: $PORT_PROCESSES"
+            echo "$PORT_PROCESSES" | xargs sudo kill -KILL 2>/dev/null || true
+            sleep 1
         fi
     fi
     
-    # Kill any existing api_server.py processes
+    # Kill any existing api_server.py processes (more aggressive)
+    print_status "Checking for existing API server processes..."
     API_PIDS=$(pgrep -f "api_server.py" 2>/dev/null || true)
     if [ -n "$API_PIDS" ]; then
-        print_status "Stopping existing API server processes..."
-        echo "$API_PIDS" | xargs kill -TERM 2>/dev/null || true
-        sleep 2
+        print_status "Stopping existing API server processes: $API_PIDS"
+        echo "$API_PIDS" | xargs sudo kill -TERM 2>/dev/null || true
+        sleep 3
         # Force kill if still running
         API_PIDS=$(pgrep -f "api_server.py" 2>/dev/null || true)
         if [ -n "$API_PIDS" ]; then
-            echo "$API_PIDS" | xargs kill -KILL 2>/dev/null || true
+            print_status "Force killing stubborn API processes: $API_PIDS"
+            echo "$API_PIDS" | xargs sudo kill -KILL 2>/dev/null || true
+            sleep 1
         fi
     fi
     
