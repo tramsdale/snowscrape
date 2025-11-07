@@ -151,10 +151,17 @@ fi
 if [ "$START_API" = true ]; then
     print_status "Checking for existing services..."
     
-    # Stop systemd service if it exists
+    # Stop systemd service if it exists (be more thorough)
     if systemctl list-units --full -all | grep -Fq "snowscrape.service"; then
         print_status "Stopping existing systemd service..."
         sudo systemctl stop snowscrape.service || print_warning "Failed to stop systemd service"
+        # Wait for it to actually stop
+        sleep 3
+    fi
+    
+    # Also disable it temporarily to prevent auto-restart during cleanup
+    if systemctl is-enabled --quiet snowscrape 2>/dev/null; then
+        sudo systemctl disable snowscrape || true
     fi
     
     # Kill any processes using port 8001 (more aggressive)
@@ -197,14 +204,17 @@ if [ "$START_API" = true ]; then
     
     print_success "Existing services stopped"
     
-    # Start API server
-    print_status "Starting API server..."
-    if [ -f "scripts/start_api.sh" ]; then
-        chmod +x scripts/start_api.sh
-        scripts/start_api.sh
-        print_success "API server started"
-    else
-        print_warning "API start script not found"
+    # In production, we'll start via systemd service (created below)
+    # In development, use the start_api.sh script
+    if [ "$ENVIRONMENT" != "production" ]; then
+        print_status "Starting API server (development mode)..."
+        if [ -f "scripts/start_api.sh" ]; then
+            chmod +x scripts/start_api.sh
+            scripts/start_api.sh
+            print_success "API server started"
+        else
+            print_warning "API start script not found"
+        fi
     fi
 fi
 
@@ -283,8 +293,10 @@ EOF
     sudo systemctl enable "$SERVICE_NAME"
     sudo systemctl start "$SERVICE_NAME"
     
-    # Verify the service started and has the API key
-    sleep 2
+    # Give it more time to start and verify
+    sleep 5
+    
+    # Check if service started successfully
     if systemctl is-active --quiet "$SERVICE_NAME"; then
         print_success "Systemd service created and started"
         
@@ -294,8 +306,42 @@ EOF
         else
             print_warning "OpenAI API key may not be set correctly in $ENV_FILE"
         fi
+        
+        # Test if API is responding
+        sleep 2
+        if curl -f http://localhost:8001/forecast >/dev/null 2>&1; then
+            print_success "API is responding on port 8001"
+        else
+            print_warning "API may still be starting up"
+        fi
+        
     else
-        print_error "Service failed to start. Check logs: sudo journalctl -u $SERVICE_NAME -n 50"
+        print_error "Service failed to start."
+        print_status "Checking for port conflicts..."
+        
+        # Check what's using the port
+        PORT_USERS=$(sudo lsof -i :8001 2>/dev/null || true)
+        if [ -n "$PORT_USERS" ]; then
+            print_error "Port 8001 is still in use:"
+            echo "$PORT_USERS"
+            print_status "Force killing processes and retrying..."
+            
+            # Kill with extreme prejudice
+            sudo lsof -ti :8001 | xargs sudo kill -KILL 2>/dev/null || true
+            sleep 2
+            
+            # Retry starting the service
+            sudo systemctl start "$SERVICE_NAME"
+            sleep 3
+            
+            if systemctl is-active --quiet "$SERVICE_NAME"; then
+                print_success "Service started after cleaning up port conflicts"
+            else
+                print_error "Service still failed. Check logs: sudo journalctl -u $SERVICE_NAME -n 50"
+            fi
+        else
+            print_error "No port conflicts detected. Check logs: sudo journalctl -u $SERVICE_NAME -n 50"
+        fi
     fi
 fi
 
