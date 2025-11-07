@@ -208,12 +208,49 @@ if [ "$ENVIRONMENT" = "production" ]; then
     
     SERVICE_NAME="snowscrape"
     SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+    ENV_FILE="/etc/snowscrape/env"
     
     # Stop and disable existing service if it exists
     if systemctl list-units --full -all | grep -Fq "${SERVICE_NAME}.service"; then
         print_status "Stopping existing systemd service..."
         sudo systemctl stop "$SERVICE_NAME" || true
         sudo systemctl disable "$SERVICE_NAME" || true
+    fi
+    
+    # Setup OpenAI API key environment file
+    print_status "Setting up OpenAI API key..."
+    if [ ! -f "$ENV_FILE" ]; then
+        print_status "Creating secure environment file..."
+        sudo mkdir -p "$(dirname "$ENV_FILE")"
+        
+        # Check if we can find the key in existing .env file
+        EXISTING_KEY=""
+        if [ -f ".env" ]; then
+            EXISTING_KEY=$(grep "^OPENAI_API_KEY=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"' || true)
+        fi
+        
+        if [ -n "$EXISTING_KEY" ]; then
+            print_status "Found existing OpenAI API key in .env file, copying to secure location..."
+            sudo tee "$ENV_FILE" > /dev/null <<EOF
+OPENAI_API_KEY=$EXISTING_KEY
+EOF
+        else
+            print_warning "OpenAI API key not found. Please set it manually:"
+            print_warning "  sudo nano $ENV_FILE"
+            print_warning "  Add: OPENAI_API_KEY=sk-your-key-here"
+            # Create empty file with placeholder
+            sudo tee "$ENV_FILE" > /dev/null <<EOF
+# Add your OpenAI API key here:
+# OPENAI_API_KEY=sk-your-key-here
+EOF
+        fi
+        
+        # Set secure permissions
+        sudo chmod 600 "$ENV_FILE"
+        sudo chown root:root "$ENV_FILE"
+        print_success "Environment file created at $ENV_FILE"
+    else
+        print_success "Environment file already exists at $ENV_FILE"
     fi
     
     print_status "Creating systemd service..."
@@ -227,6 +264,7 @@ Type=simple
 User=$(whoami)
 WorkingDirectory=$PROJECT_DIR
 Environment=PATH=$PROJECT_DIR/.venv/bin
+EnvironmentFile=$ENV_FILE
 ExecStart=$PROJECT_DIR/.venv/bin/python $PROJECT_DIR/api_server.py --production
 Restart=always
 RestartSec=10
@@ -239,7 +277,20 @@ EOF
     sudo systemctl enable "$SERVICE_NAME"
     sudo systemctl start "$SERVICE_NAME"
     
-    print_success "Systemd service created and started"
+    # Verify the service started and has the API key
+    sleep 2
+    if systemctl is-active --quiet "$SERVICE_NAME"; then
+        print_success "Systemd service created and started"
+        
+        # Check if API key is available (basic verification)
+        if sudo grep -q "^OPENAI_API_KEY=sk-" "$ENV_FILE" 2>/dev/null; then
+            print_success "OpenAI API key configured"
+        else
+            print_warning "OpenAI API key may not be set correctly in $ENV_FILE"
+        fi
+    else
+        print_error "Service failed to start. Check logs: sudo journalctl -u $SERVICE_NAME -n 50"
+    fi
 fi
 
 # Display deployment summary
@@ -270,5 +321,7 @@ echo "  - View cron jobs: crontab -l"
 
 if [ "$ENVIRONMENT" = "production" ]; then
     echo "  - Service status: sudo systemctl status snowscrape"
-    echo "  - Service logs: sudo journalctl -u snowscrape -f"
+    echo "  - Service logs: sudo journalctl -u snowscrape -f" 
+    echo "  - Edit API key: sudo nano /etc/snowscrape/env"
+    echo "  - Restart after key change: sudo systemctl restart snowscrape"
 fi
