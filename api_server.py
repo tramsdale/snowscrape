@@ -4,7 +4,7 @@ Snow Data API Server
 Serves snow forecast data as JSON API endpoints
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -116,7 +116,7 @@ async def get_hourly_forecast():
     return load_json_file("hourly_forecast.json")
 
 @app.get("/forecast/html", response_class=HTMLResponse)
-async def get_html_forecast():
+async def get_html_forecast(request: Request):
     """Get beautifully styled HTML forecast featuring ChatGPT analysis"""
     try:
         # Load the hourly forecast data
@@ -125,8 +125,13 @@ async def get_html_forecast():
         # Try to get cached ChatGPT forecast first
         chatgpt_forecast = get_cached_or_generate_forecast(hourly_data)
         
+        # Determine base URL from request
+        base_url = str(request.base_url).rstrip('/')
+        
         # Create beautiful ski-themed HTML with ChatGPT as the star
-        html_content = create_ski_themed_forecast_html(hourly_data, chatgpt_forecast)
+        html_content = create_ski_themed_forecast_html(
+            hourly_data, chatgpt_forecast, base_url
+        )
         
         return HTMLResponse(content=html_content)
         
@@ -238,25 +243,32 @@ def get_cache_timestamp_info() -> str:
     except Exception:
         return ""
 
-def create_ski_themed_forecast_html(hourly_data: List[Dict], 
-                                   chatgpt_forecast: str = None) -> str:
+def create_ski_themed_forecast_html(hourly_data: List[Dict],
+                                    chatgpt_forecast: str = None,
+                                    base_url: str = "") -> str:
     """Create a beautiful ski-themed HTML forecast"""
     
     # Extract snow events
-    snow_events = [period for period in hourly_data 
-                  if period.get('snow_amount') and period['snow_amount'] != '—']
-    rain_events = [period for period in hourly_data 
-                  if period.get('rain_amount') and period['rain_amount'] != '—']
+    snow_events = [period for period in hourly_data
+                   if period.get('snow_amount') and 
+                   period['snow_amount'] != '—']
+    rain_events = [period for period in hourly_data
+                   if period.get('rain_amount') and
+                   period['rain_amount'] != '—']
+    
+    # Ensure base_url ends with / if not empty
+    if base_url and not base_url.endswith('/'):
+        base_url += '/'
     
     # Generate HTML with external CSS
-    html = """
+    html = f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>🎿 Avoriaz Snow Forecast</title>
-        <link rel="stylesheet" href="/static/ski-forecast.css">
+        <link rel="stylesheet" href="{base_url}static/ski-forecast.css">
     </head>
     <body>
         <div class="container">
