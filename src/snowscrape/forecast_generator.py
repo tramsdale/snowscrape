@@ -115,6 +115,8 @@ class SkiForecastGenerator:
 
 The uploaded JSON contains hourly forecast data for each elevation. Use this data to provide elevation-specific recommendations and highlight differences between mountain elevations (e.g., better snow conditions at top, warmer temperatures at bottom, wind exposure at different levels).
 
+Firstly, check whether the resort is open, and tailor your forecast accordingly.
+
 Structure your forecast with these sections:
 {f"- {today_text}" if include_today else ""}
 - Tomorrow  
