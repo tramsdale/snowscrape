@@ -128,6 +128,37 @@ async def health_check():
         "openai_configured": has_openai_key
     }
 
+@app.get("/debug/env")
+async def debug_env():
+    """Debug environment loading (for troubleshooting)"""
+    project_dir = Path(__file__).parent
+    env_file = project_dir / ".env"
+    
+    debug_info = {
+        "working_directory": str(Path.cwd()),
+        "project_directory": str(project_dir),
+        "env_file_path": str(env_file),
+        "env_file_exists": env_file.exists(),
+        "openai_key_set": bool(os.getenv('OPENAI_API_KEY')),
+        "environment_variables": {
+            k: "***" if "key" in k.lower() or "secret" in k.lower() or "token" in k.lower()
+            else v for k, v in os.environ.items() 
+            if k.startswith(('OPENAI_', 'SNOW_', 'TARGET_', 'ENVIRONMENT'))
+        }
+    }
+    
+    # Try reloading environment to see if it helps
+    if env_file.exists() and not os.getenv('OPENAI_API_KEY'):
+        try:
+            from dotenv import load_dotenv
+            load_dotenv(env_file, override=True)
+            debug_info["reload_attempted"] = True
+            debug_info["openai_key_after_reload"] = bool(os.getenv('OPENAI_API_KEY'))
+        except Exception as e:
+            debug_info["reload_error"] = str(e)
+    
+    return debug_info
+
 @app.get("/meta")
 async def get_metadata():
     """Get scraper metadata"""

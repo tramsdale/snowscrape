@@ -235,6 +235,19 @@ if [ "$ENVIRONMENT" = "production" ]; then
     
     # Setup OpenAI API key environment file
     print_status "Setting up OpenAI API key..."
+    
+    # First, ensure .env file exists in project directory for API server
+    if [ -f ".env" ]; then
+        print_status "Found .env file in project directory"
+    else
+        print_warning "No .env file found in project directory"
+        print_warning "Creating basic .env file - you'll need to add your OpenAI API key"
+        cat > .env <<EOF
+# Add your OpenAI API key here:
+# OPENAI_API_KEY=sk-your-key-here
+EOF
+    fi
+    
     if [ ! -f "$ENV_FILE" ]; then
         print_status "Creating secure environment file..."
         sudo mkdir -p "$(dirname "$ENV_FILE")"
@@ -267,6 +280,19 @@ EOF
         print_success "Environment file created at $ENV_FILE"
     else
         print_success "Environment file already exists at $ENV_FILE"
+        
+        # Check if the systemd env file has the key but .env doesn't
+        if [ -f ".env" ]; then
+            EXISTING_KEY=$(grep "^OPENAI_API_KEY=" .env 2>/dev/null | cut -d'=' -f2- | tr -d '"' || true)
+            if [ -z "$EXISTING_KEY" ]; then
+                # Try to copy key from systemd env file to .env for API server
+                SYSTEMD_KEY=$(sudo grep "^OPENAI_API_KEY=" "$ENV_FILE" 2>/dev/null | cut -d'=' -f2- | tr -d '"' || true)
+                if [ -n "$SYSTEMD_KEY" ]; then
+                    print_status "Copying OpenAI key from systemd env to project .env file..."
+                    echo "OPENAI_API_KEY=$SYSTEMD_KEY" >> .env
+                fi
+            fi
+        fi
     fi
     
     print_status "Creating systemd service..."
