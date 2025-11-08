@@ -1,0 +1,61 @@
+## HTML Version
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ski Resort Weather Forecast</title>
+</head>
+
+<body>
+    <h1>Ski Resort Weather Forecast</h1>
+
+    <h2>Tomorrow - November 1st</h2>
+    <ul>
+        <li>Temperature Range: 9°C / 9°C</li>
+        <li>Weather: Cloudy</li>
+        <li>Wind: 10 km/h SSW</li>
+        <li>Snowfall: N/A</li>
+        <li>Special Notes: Light rain expected at 10 PM</li>
+        <li>Best Conditions: Groomers</li>
+    </ul>
+
+    <h2>Day after Tomorrow - November 2nd</h2>
+    <ul>
+        <li>Temperature Range: 7°C / 3°C</li>
+        <li>Weather: Heavy rain in the morning, light snow at night</li>
+        <li>Wind: 10 km/h SW</li>
+        <li>Snowfall: 1.4 cm</li>
+        <li>Special Notes: High avalanche risk due to heavy rain</li>
+        <li>Best Conditions: Backcountry</li>
+    </ul>
+
+    <h2>Next 7 Days</h2>
+    <p>Keep an eye on November 5th (Wednesday) for clear skies and perfect skiing conditions!</p>
+</body>
+
+</html>
+
+## Markdown Version
+
+## Tomorrow - November 1st
+- Temperature Range: 9°C / 9°C
+- Weather: Cloudy
+- Wind: 10 km/h SSW
+- Snowfall: N/A
+- Special Notes: Light rain expected at 10 PM
+- Best Conditions: Groomers
+
+## Day after Tomorrow - November 2nd
+- Temperature Range: 7°C / 3°C
+- Weather: Heavy rain in the morning, light snow at night
+- Wind: 10 km/h SW
+- Snowfall: 1.4 cm
+- Special Notes: High avalanche risk due to heavy rain
+- Best Conditions: Backcountry
+
+## Next 7 Days
+Keep an eye on November 5th (Wednesday) for clear skies and perfect skiing conditions!

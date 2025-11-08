@@ -1,0 +1,32 @@
+{
+  "scrape_time": "2025-11-08 14:20:33",
+  "elevations_scraped": [
+    "mid",
+    "top",
+    "bot"
+  ],
+  "elevation_data": {
+    "mid": {
+      "url": "https://www.snow-forecast.com/resorts/Avoriaz/12day/mid",
+      "html_length": 327554,
+      "dynamic_periods": 36,
+      "hourly_periods": 58,
+      "tables_found": 3
+    },
+    "top": {
+      "url": "https://www.snow-forecast.com/resorts/Avoriaz/12day/top",
+      "html_length": 329469,
+      "dynamic_periods": 36,
+      "hourly_periods": 58,
+      "tables_found": 3
+    },
+    "bot": {
+      "url": "https://www.snow-forecast.com/resorts/Avoriaz/12day/bot",
+      "html_length": 327397,
+      "dynamic_periods": 36,
+      "hourly_periods": 58,
+      "tables_found": 3
+    }
+  },
+  "scrape_mode": "multi-elevation"
+}

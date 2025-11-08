@@ -34,35 +34,67 @@ class SkiForecastGenerator:
             print("❌ OpenAI API not configured. Set OPENAI_API_KEY "
                   "environment variable or pass api_key parameter.")
     
-    def load_hourly_forecast(self, data_dir: str = "out_snow") -> List[Dict]:
+    def load_hourly_forecast(self, data_dir: str = "out_snow") -> Dict[str, List[Dict]]:
         """
-        Load hourly forecast data from local JSON file.
+        Load hourly forecast data from elevation-specific JSON files.
         
         Args:
             data_dir: Directory containing forecast data files
             
         Returns:
-            List of hourly forecast data dictionaries
+            Dictionary with elevation keys and forecast data lists
         """
-        forecast_file = Path(data_dir) / "hourly_forecast.json"
+        elevation_data = {}
+        elevations = ['top', 'mid', 'bot']
         
-        if not forecast_file.exists():
-            raise FileNotFoundError(
-                f"Hourly forecast file not found: {forecast_file}"
-            )
+        for elevation in elevations:
+            forecast_file = Path(data_dir) / f"hourly_forecast_{elevation}.json"
+            
+            if forecast_file.exists():
+                with open(forecast_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                elevation_data[elevation] = data
+                print(f"✅ Loaded {len(data)} hourly forecast entries for {elevation}")
+            else:
+                print(f"⚠️  No forecast file found for {elevation}: {forecast_file}")
         
-        with open(forecast_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        # Fallback to legacy file if no elevation-specific files found
+        if not elevation_data:
+            legacy_file = Path(data_dir) / "hourly_forecast.json"
+            if legacy_file.exists():
+                with open(legacy_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                elevation_data['mid'] = data  # Assume legacy is mid elevation
+                print(f"✅ Loaded {len(data)} hourly forecast entries (legacy format)")
+            else:
+                raise FileNotFoundError(
+                    f"No hourly forecast files found in {data_dir}"
+                )
         
-        print(f"✅ Loaded {len(data)} hourly forecast entries")
-        return data
+        return elevation_data
     
-    def create_forecast_prompt(self, forecast_data: List[Dict]) -> str:
+    def create_forecast_data_file(self, elevation_data: Dict[str, List[Dict]]) -> str:
         """
-        Create the ChatGPT prompt with forecast data.
+        Create a temporary JSON file with elevation forecast data.
         
         Args:
-            forecast_data: List of hourly forecast data
+            elevation_data: Dictionary with elevation keys and forecast data
+            
+        Returns:
+            Path to the temporary file
+        """
+        import tempfile
+        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(elevation_data, temp_file, indent=2)
+        temp_file.close()
+        return temp_file.name
+    
+    def create_forecast_prompt(self, elevation_data: Dict[str, List[Dict]]) -> str:
+        """
+        Create the ChatGPT prompt for multi-elevation data (references uploaded file).
+        
+        Args:
+            elevation_data: Dictionary with elevation keys and forecast data
             
         Returns:
             String containing the formatted prompt
@@ -73,51 +105,53 @@ class SkiForecastGenerator:
         
         today_text = "Today, " if include_today else ""
         
-        # Convert forecast data to JSON string for the prompt
-        forecast_json = json.dumps(forecast_data, indent=2)
+        # Build elevation info text
+        elevations_available = list(elevation_data.keys())
+        elevation_info = f"Elevations available: {', '.join(elevations_available).upper()}"
         
-        prompt = f"""Using the JSON provided, create a {today_text}Tomorrow, next 7 days ski forecast as HTML and as markdown.
+        prompt = f"""Using the multi-elevation ski forecast JSON data I've uploaded, create a comprehensive {today_text}Tomorrow and next 7 days ski forecast in both HTML and Markdown formats.
 
-The forecast should start with a detailed text/conversational summary of the overall conditions, 
-with best likelihood of good skiing and any hazards, split into the sections: 
-   {today_text}
-   Tomorrow
-   Day after Tomorrow
-   Next 7 Days
+{elevation_info}
 
-Each section should include:
-- Day of the week (in the title, and date) - except for the 'Next 7 Days' section which is a summary, although should call out any particularly awesome looking days
-- A conversational summary of the day's skiing conditions. Use engaging and descriptive language suitable for ski enthusiasts planning their activities, but with a fun aspect to it - not too serious or dry.
-- Expected temperature range (high/low in Celsius)
-- Expected snowfall (in cm) and times
-- Wind conditions (speed and direction)
-- Weather conditions (sunny, cloudy, snow, etc)
-- Any special notes for skiers (e.g. avalanche risk, grooming status)
-- Whether conditions are best for groomers, powder, backcountry, etc.
-Use formatted HTML elements (headings, lists, bold text) for the HTML version.
-Use snowsports lingo, like sick, pow, corduroy, bluebird, etc.
+The uploaded JSON contains hourly forecast data for each elevation. Use this data to provide elevation-specific recommendations and highlight differences between mountain elevations (e.g., better snow conditions at top, warmer temperatures at bottom, wind exposure at different levels).
 
-Format your response exactly like this:
+Structure your forecast with these sections:
+{f"- {today_text}" if include_today else ""}
+- Tomorrow  
+- Day after Tomorrow
+- Next 7 Days (summary)
+
+For each day section, include:
+- Day of week and date in heading
+- Conversational summary of skiing conditions with elevation-specific advice
+- Temperature ranges for different elevations
+- Snowfall amounts and timing, noting elevation differences  
+- Wind conditions and elevation exposure
+- Weather conditions at different elevations
+- Elevation-specific recommendations (top for powder, mid for groomers, etc.)
+- Special notes (avalanche risk, grooming status, etc.)
+
+Use engaging ski language: pow, bluebird, corduroy, sick, etc.
+Use HTML formatting elements (headings, lists, bold) for the HTML version.
+
+Format your response exactly as:
 ## HTML Version
-[Your HTML forecast here]
+[Your complete HTML forecast here]
 
 ## Markdown Version  
-[Your Markdown forecast here]
-
-JSON Data:
-{forecast_json}"""
+[Your complete Markdown forecast here]"""
         
         return prompt
     
     def generate_forecast_with_chatgpt(
         self, 
-        forecast_data: List[Dict]
+        elevation_data: Dict[str, List[Dict]]
     ) -> Optional[Dict[str, str]]:
         """
         Generate HTML and markdown forecasts using ChatGPT.
         
         Args:
-            forecast_data: List of hourly forecast data
+            elevation_data: Dictionary with elevation keys and forecast data
             
         Returns:
             Dictionary with 'html', 'markdown', and 'raw' keys
@@ -126,13 +160,25 @@ JSON Data:
             print("❌ OpenAI client not initialized")
             return None
         
-        prompt = self.create_forecast_prompt(forecast_data)
+        # Create temporary file with forecast data
+        json_file_path = self.create_forecast_data_file(elevation_data)
+        prompt = self.create_forecast_prompt(elevation_data)
         
         try:
             print("🤖 Generating forecast with ChatGPT...")
+            print(f"📎 Uploading forecast data file: {json_file_path}")
+            
+            # Upload the file to OpenAI
+            with open(json_file_path, 'rb') as f:
+                file_upload = self.client.files.create(
+                    file=f,
+                    purpose="assistants"
+                )
+            
+            print(f"✅ File uploaded with ID: {file_upload.id}")
             
             response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o",  # Use GPT-4o for better file handling
                 messages=[
                     {
                         "role": "system",
@@ -144,21 +190,48 @@ JSON Data:
                                   "exact headers requested.")
                     },
                     {
-                        "role": "user",
-                        "content": prompt
+                        "role": "user", 
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": prompt
+                            }
+                        ],
+                        "attachments": [
+                            {
+                                "file_id": file_upload.id,
+                                "tools": [{"type": "code_interpreter"}]
+                            }
+                        ]
                     }
                 ],
                 temperature=0.3,  # Lower temperature for consistent formatting
-                max_tokens=2500   # Enough tokens for detailed forecast
+                max_tokens=3000   # More tokens for detailed forecast
             )
             
             content = response.choices[0].message.content.strip()
             
             # Parse the response into HTML and Markdown sections
-            return self.parse_chatgpt_response(content)
+            result = self.parse_chatgpt_response(content)
+            
+            # Clean up temporary file
+            try:
+                import os
+                os.unlink(json_file_path)
+                print(f"🧹 Cleaned up temporary file: {json_file_path}")
+            except:
+                pass
+            
+            return result
             
         except Exception as e:
             print(f"❌ ChatGPT API error: {e}")
+            # Clean up temporary file even on error
+            try:
+                import os
+                os.unlink(json_file_path)
+            except:
+                pass
             return None
     
     def parse_chatgpt_response(self, content: str) -> Dict[str, str]:
@@ -357,12 +430,12 @@ JSON Data:
         print("🎿 Starting ski forecast generation...")
         
         try:
-            # Load forecast data
+            # Load elevation-specific forecast data
             print(f"📡 Loading forecast data from {data_dir}...")
-            forecast_data = self.load_hourly_forecast(data_dir)
+            elevation_data = self.load_hourly_forecast(data_dir)
             
             # Generate forecasts with ChatGPT
-            forecasts = self.generate_forecast_with_chatgpt(forecast_data)
+            forecasts = self.generate_forecast_with_chatgpt(elevation_data)
             
             if not forecasts:
                 print("❌ Failed to generate forecasts")
