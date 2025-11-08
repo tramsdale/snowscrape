@@ -58,7 +58,22 @@ if python main.py >> "$LOG_FILE" 2>&1; then
     
     # Check if output files were created
     if [ -f "out_snow/meta.json" ]; then
-        LAST_UPDATE=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "out_snow/meta.json")
+        # Use cross-platform date command instead of stat
+        if command -v stat >/dev/null 2>&1; then
+            # Try Linux/GNU stat first
+            if stat --version >/dev/null 2>&1; then
+                LAST_UPDATE=$(stat -c "%y" "out_snow/meta.json" 2>/dev/null | cut -d'.' -f1)
+            else
+                # macOS stat fallback
+                LAST_UPDATE=$(stat -f "%Sm" -t "%Y-%m-%d %H:%M:%S" "out_snow/meta.json" 2>/dev/null)
+            fi
+        fi
+        
+        # If stat failed or not available, use ls
+        if [ -z "$LAST_UPDATE" ]; then
+            LAST_UPDATE=$(ls -la "out_snow/meta.json" | awk '{print $6, $7, $8}')
+        fi
+        
         log "Data last updated: $LAST_UPDATE"
     fi
 else
