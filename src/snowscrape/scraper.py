@@ -563,20 +563,64 @@ def scrape_elevation(page, elevation_name, elevation_url):
     page.goto(elevation_url, wait_until="domcontentloaded")
     
     # Let dynamic content render a bit (ads/JS). Increase if needed.
-    page.wait_for_timeout(1500)
+    page.wait_for_timeout(2000)  # Increased timeout
+    
     # If content loads async, try "networkidle" as a fallback:
     try:
-        page.wait_for_load_state("networkidle", timeout=5000)
+        page.wait_for_load_state("networkidle", timeout=8000)  # Increased timeout
     except PWTimeout:
+        print(f"Network idle timeout for {elevation_name}, continuing...")
         pass
 
     html = page.content()
     print(f"{elevation_name} HTML content length: {len(html)} characters")
     
-    # Check if we're still on a login page
-    if "login" in page.url.lower() or "member[user_name]" in html:
-        print(f"WARNING: Still on login page for {elevation_name}!")
-        return None
+    # Better login detection - check for multiple indicators
+    login_indicators = [
+        "member[user_name]" in html,
+        "member[password]" in html,
+        "/login" in page.url.lower(),
+        "sign in" in html.lower(),
+        "log in" in html.lower(),
+        '<div class="forecast-table-days"' not in html,  # Main forecast table missing
+        len(html) < 200000  # Too small to be a full forecast page
+    ]
+    
+    if any(login_indicators):
+        print(f"WARNING: Login required for {elevation_name}! Indicators: {sum(login_indicators)}/7")
+        print(f"Current URL: {page.url}")
+        
+        # Try to re-authenticate for this specific page
+        try:
+            print(f"Attempting re-authentication for {elevation_name}...")
+            # Save current HTML for debugging
+            (OUT_DIR / f"debug_{elevation_name}_login.html").write_text(html, encoding="utf-8")
+            
+            # Try clicking accept button if present
+            try:
+                accept_btn = page.get_by_role("button", name=re.compile(r"accept", re.I))
+                if accept_btn.is_visible():
+                    accept_btn.click(timeout=3000)
+                    print(f"Clicked accept button for {elevation_name}")
+                    page.wait_for_timeout(2000)
+            except:
+                pass
+            
+            # Refresh the page after potential accept click
+            page.reload(wait_until="domcontentloaded")
+            page.wait_for_timeout(3000)
+            html = page.content()
+            
+            # Check again if we're logged in now
+            if '<div class="forecast-table-days"' in html and len(html) > 200000:
+                print(f"Successfully re-authenticated for {elevation_name}")
+            else:
+                print(f"Re-authentication failed for {elevation_name}")
+                return None
+                
+        except Exception as e:
+            print(f"Re-authentication error for {elevation_name}: {e}")
+            return None
     else:
         print(f"Successfully loaded {elevation_name} forecast page")
     
@@ -616,11 +660,16 @@ def main():
 
         # Ensure we're logged in using the default TARGET_URL (mid)
         page = ensure_login(context)
+        
+        # Save the authenticated state after successful login
+        context.storage_state(path=STORAGE)
+        print(f"Saved authentication state to {STORAGE}")
 
         # Scrape data from all three elevations
         all_elevation_data = {}
         
         for elevation_name, elevation_url in ELEVATIONS.items():
+            print(f"\n--- Processing {elevation_name.upper()} elevation ---")
             elevation_data = scrape_elevation(page, elevation_name, elevation_url)
             if elevation_data:
                 all_elevation_data[elevation_name] = elevation_data
