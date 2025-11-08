@@ -222,8 +222,11 @@ async def get_all_elevations():
 async def get_html_forecast(request: Request):
     """Get beautifully styled HTML forecast featuring ChatGPT analysis"""
     try:
-        # Load the hourly forecast data
-        hourly_data = load_json_file("hourly_forecast.json")
+        # Try elevation-specific files first, fallback to legacy
+        try:
+            hourly_data = load_json_file("hourly_forecast_mid.json")
+        except HTTPException:
+            hourly_data = load_json_file("hourly_forecast.json")
         
         # Try to get cached ChatGPT forecast first
         chatgpt_forecast = get_cached_or_generate_forecast(hourly_data)

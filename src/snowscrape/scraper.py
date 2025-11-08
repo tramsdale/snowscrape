@@ -559,70 +559,68 @@ def scrape_elevation(page, elevation_name, elevation_url):
     """Scrape forecast data from a specific elevation"""
     print(f"Scraping {elevation_name} elevation: {elevation_url}")
     
-    # Navigate to the specific elevation
-    page.goto(elevation_url, wait_until="domcontentloaded")
-    
-    # Let dynamic content render a bit (ads/JS). Increase if needed.
-    page.wait_for_timeout(2000)  # Increased timeout
-    
-    # If content loads async, try "networkidle" as a fallback:
+    # Clear any existing state and navigate fresh
     try:
-        page.wait_for_load_state("networkidle", timeout=8000)  # Increased timeout
-    except PWTimeout:
-        print(f"Network idle timeout for {elevation_name}, continuing...")
-        pass
+        # First, navigate to base snow-forecast.com to ensure session is active
+        print(f"Pre-loading base domain for session persistence...")
+        page.goto("https://www.snow-forecast.com/", wait_until="domcontentloaded")
+        page.wait_for_timeout(1000)
+        
+        # Now navigate to the specific elevation
+        print(f"Navigating to {elevation_name} elevation...")
+        page.goto(elevation_url, wait_until="domcontentloaded")
+        
+        # Let dynamic content render a bit (ads/JS). Increase if needed.
+        page.wait_for_timeout(3000)  # Increased timeout for full load
+        
+        # If content loads async, try "networkidle" as a fallback:
+        try:
+            page.wait_for_load_state("networkidle", timeout=10000)
+        except PWTimeout:
+            print(f"Network idle timeout for {elevation_name}, continuing...")
+            pass
+            
+    except Exception as e:
+        print(f"Navigation error for {elevation_name}: {e}")
+        return None
 
     html = page.content()
     print(f"{elevation_name} HTML content length: {len(html)} characters")
     
-    # Better login detection - check for multiple indicators
-    login_indicators = [
-        "member[user_name]" in html,
-        "member[password]" in html,
-        "/login" in page.url.lower(),
-        "sign in" in html.lower(),
-        "log in" in html.lower(),
-        '<div class="forecast-table-days"' not in html,  # Main forecast table missing
-        len(html) < 200000  # Too small to be a full forecast page
-    ]
+    # Check if we have main forecast content (simplified for premium users)
+    has_forecast_table = "forecast-table" in html
+    has_forecast_days = '<div class="forecast-table-days"' in html
+    page_size_ok = len(html) > 150000  # Lowered threshold
     
-    if any(login_indicators):
-        print(f"WARNING: Login required for {elevation_name}! Indicators: {sum(login_indicators)}/7")
-        print(f"Current URL: {page.url}")
+    if not (has_forecast_table or has_forecast_days) or not page_size_ok:
+        print(f"WARNING: {elevation_name} page missing forecast content!")
+        print(f"  Forecast table: {has_forecast_table}")
+        print(f"  Forecast days: {has_forecast_days}")
+        print(f"  Page size OK: {page_size_ok} ({len(html)} chars)")
+        print(f"  Current URL: {page.url}")
         
-        # Try to re-authenticate for this specific page
+        # Save debug HTML
+        (OUT_DIR / f"debug_{elevation_name}_missing_content.html").write_text(html, encoding="utf-8")
+        
+        # Try a simple page refresh to resolve temporary issues
+        print(f"Attempting page refresh for {elevation_name}...")
         try:
-            print(f"Attempting re-authentication for {elevation_name}...")
-            # Save current HTML for debugging
-            (OUT_DIR / f"debug_{elevation_name}_login.html").write_text(html, encoding="utf-8")
-            
-            # Try clicking accept button if present
-            try:
-                accept_btn = page.get_by_role("button", name=re.compile(r"accept", re.I))
-                if accept_btn.is_visible():
-                    accept_btn.click(timeout=3000)
-                    print(f"Clicked accept button for {elevation_name}")
-                    page.wait_for_timeout(2000)
-            except:
-                pass
-            
-            # Refresh the page after potential accept click
             page.reload(wait_until="domcontentloaded")
             page.wait_for_timeout(3000)
             html = page.content()
             
-            # Check again if we're logged in now
-            if '<div class="forecast-table-days"' in html and len(html) > 200000:
-                print(f"Successfully re-authenticated for {elevation_name}")
+            # Check again
+            if "forecast-table" in html and len(html) > 150000:
+                print(f"✅ Page refresh successful for {elevation_name}")
             else:
-                print(f"Re-authentication failed for {elevation_name}")
+                print(f"❌ Page refresh failed for {elevation_name}")
                 return None
                 
         except Exception as e:
-            print(f"Re-authentication error for {elevation_name}: {e}")
+            print(f"Page refresh error for {elevation_name}: {e}")
             return None
     else:
-        print(f"Successfully loaded {elevation_name} forecast page")
+        print(f"✅ Successfully loaded {elevation_name} forecast page")
     
     # Save raw HTML for debugging
     (OUT_DIR / f"raw_forecast_{elevation_name}.html").write_text(
@@ -658,21 +656,51 @@ def main():
             context_args["storage_state"] = STORAGE
         context = browser.new_context(**context_args)
 
-        # Ensure we're logged in using the default TARGET_URL (mid)
+        # First, try to scrape just the mid elevation to ensure we have working data
+        print("=== INITIAL LOGIN AND MID SCRAPING ===")
         page = ensure_login(context)
         
         # Save the authenticated state after successful login
         context.storage_state(path=STORAGE)
         print(f"Saved authentication state to {STORAGE}")
+        
+        # Verify authentication works by checking current session
+        print("Verifying authentication session...")
+        cookies = context.cookies()
+        auth_cookies = [c for c in cookies if 'session' in c['name'].lower() or 'auth' in c['name'].lower()]
+        print(f"Found {len(auth_cookies)} authentication cookies")
+        
+        # Test that we can navigate between elevation URLs
+        print("Testing navigation between elevations...")
+        for test_elevation in ['mid', 'top', 'bot']:
+            test_url = ELEVATIONS[test_elevation]
+            page.goto(test_url, wait_until="domcontentloaded")
+            page.wait_for_timeout(1000)
+            test_html = page.content()
+            has_forecast = "forecast-table" in test_html
+            print(f"  {test_elevation}: {'✅' if has_forecast else '❌'} forecast data present")
 
-        # Scrape data from all three elevations
+        # Scrape data from all three elevations, with fallback strategy
         all_elevation_data = {}
         
-        for elevation_name, elevation_url in ELEVATIONS.items():
+        # Start with mid (our baseline), then try top/bot if mid succeeds
+        elevation_order = ['mid', 'top', 'bot']
+        mid_success = False
+        
+        for elevation_name in elevation_order:
+            elevation_url = ELEVATIONS[elevation_name]
             print(f"\n--- Processing {elevation_name.upper()} elevation ---")
+            
+            # Skip top/bot if mid failed (indicates fundamental auth issues)
+            if elevation_name in ['top', 'bot'] and not mid_success:
+                print(f"⏭️  Skipping {elevation_name} - mid elevation failed, likely auth issue")
+                continue
+                
             elevation_data = scrape_elevation(page, elevation_name, elevation_url)
             if elevation_data:
                 all_elevation_data[elevation_name] = elevation_data
+                if elevation_name == 'mid':
+                    mid_success = True
                 
                 # Export individual elevation data
                 meta = tidy_and_export(
@@ -681,13 +709,79 @@ def main():
                     elevation_data['hourly_forecast'],
                     elevation_suffix=f"_{elevation_name}"
                 )
-                print(f"Exported {elevation_name} data: {json.dumps(meta, indent=2)}")
+                print(f"✅ Successfully exported {elevation_name} data")
+            else:
+                print(f"❌ Failed to scrape {elevation_name} elevation")
+                
+                # For top/bot, this might be normal (premium required)
+                if elevation_name in ['top', 'bot']:
+                    print(f"ℹ️  {elevation_name.upper()} elevation may require premium access")
+                
+                # For mid elevation failure, this is critical
+                elif elevation_name == 'mid':
+                    print("🚨 CRITICAL: Mid elevation failed - trying legacy fallback")
+                    # Try legacy single-elevation approach as fallback
+                    print("Trying legacy single-elevation scraping...")
+                    try:
+                        html = page.content()
+                        dfs = extract_tables(html)
+                        soup = BeautifulSoup(html, "lxml")
+                        dynamic_forecast_data = extract_dynamic_forecast_data(soup)
+                        hourly_forecast_data = extract_hourly_forecast_data(page)
+                        
+                        # Export without elevation suffix for backward compatibility
+                        legacy_meta = tidy_and_export(dfs, dynamic_forecast_data, 
+                                                     hourly_forecast_data)
+                        print("✅ Legacy fallback successful")
+                        
+                        # Also create mid-specific files
+                        legacy_meta_mid = tidy_and_export(dfs, dynamic_forecast_data, 
+                                                         hourly_forecast_data,
+                                                         elevation_suffix="_mid")
+                        all_elevation_data['mid'] = {
+                            'elevation': 'mid',
+                            'url': elevation_url,
+                            'tables': dfs,
+                            'dynamic_forecast': dynamic_forecast_data,
+                            'hourly_forecast': hourly_forecast_data,
+                            'html_length': len(html)
+                        }
+                        print("✅ Legacy data converted to mid elevation format")
+                        
+                    except Exception as e:
+                        print(f"❌ Legacy fallback also failed: {e}")
+                        break
         
+        # If no elevations were successfully scraped, fall back to single elevation
+        if not all_elevation_data:
+            print("\n🔄 FALLBACK: No elevation data found, trying simple mid-only scraping...")
+            try:
+                # Go back to mid URL and scrape normally
+                page.goto(TARGET_URL, wait_until="domcontentloaded")
+                page.wait_for_timeout(2000)
+                
+                html = page.content()
+                dfs = extract_tables(html)
+                soup = BeautifulSoup(html, "lxml")
+                dynamic_forecast_data = extract_dynamic_forecast_data(soup)
+                hourly_forecast_data = extract_hourly_forecast_data(page)
+                
+                # Export with legacy naming for compatibility
+                fallback_meta = tidy_and_export(dfs, dynamic_forecast_data, 
+                                               hourly_forecast_data)
+                
+                print("✅ Fallback scraping successful!")
+                print(f"Fallback data: {json.dumps(fallback_meta, indent=2)}")
+                
+            except Exception as e:
+                print(f"❌ Even fallback scraping failed: {e}")
+
         # Create combined summary
         combined_meta = {
             'scrape_time': time.strftime('%Y-%m-%d %H:%M:%S'),
             'elevations_scraped': list(all_elevation_data.keys()),
-            'elevation_data': {}
+            'elevation_data': {},
+            'scrape_mode': 'multi-elevation' if all_elevation_data else 'fallback'
         }
         
         for elevation, data in all_elevation_data.items():
@@ -705,6 +799,11 @@ def main():
         
         print("=== COMBINED SCRAPING SUMMARY ===")
         print(json.dumps(combined_meta, indent=2))
+        
+        if all_elevation_data:
+            print(f"✅ Successfully scraped {len(all_elevation_data)} elevation(s)")
+        else:
+            print("⚠️  Multi-elevation scraping failed, check fallback results")
         
         page.close()
         context.close()
