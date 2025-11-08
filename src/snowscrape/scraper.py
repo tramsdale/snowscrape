@@ -13,7 +13,15 @@ load_dotenv()
 SNOW_USER  = os.getenv("SNOW_USER")  # No default - must be provided
 SNOW_PASS  = os.getenv("SNOW_PASS")  # No default - must be provided
 TARGET_URL = os.getenv("TARGET_URL", "https://www.snow-forecast.com/resorts/Avoriaz/12day/mid")
+BASE_URL = "https://www.snow-forecast.com/resorts/Avoriaz/12day"
 STORAGE    = "snow_state.json"
+
+# Mountain elevation endpoints
+ELEVATIONS = {
+    'top': f"{BASE_URL}/top",
+    'mid': f"{BASE_URL}/mid", 
+    'bot': f"{BASE_URL}/bot"
+}
 
 OUT_DIR = pathlib.Path("out_snow")
 OUT_DIR.mkdir(exist_ok=True)
@@ -481,11 +489,12 @@ def extract_dynamic_forecast_data(soup):
 
 def tidy_and_export(dfs: list[pd.DataFrame], 
                     dynamic_forecast_data: list = None,
-                    hourly_forecast_data: list = None):
+                    hourly_forecast_data: list = None,
+                    elevation_suffix: str = ""):
     # Save all tables
     all_paths = []
     for i, df in enumerate(dfs, start=1):
-        p = OUT_DIR / f"table_{i}.csv"
+        p = OUT_DIR / f"table_{i}{elevation_suffix}.csv"
         df.to_csv(p, index=False)
         all_paths.append(str(p))
 
@@ -506,39 +515,95 @@ def tidy_and_export(dfs: list[pd.DataFrame],
     summary = {}
     if snow_frames:
         snow_cat = pd.concat(snow_frames, ignore_index=True)
-        snow_cat.to_csv(OUT_DIR / "snow_summary.csv", index=False)
-        summary["snow_summary_csv"] = str(OUT_DIR / "snow_summary.csv")
+        csv_path = OUT_DIR / f"snow_summary{elevation_suffix}.csv"
+        json_path = OUT_DIR / f"snow_summary{elevation_suffix}.json"
+        snow_cat.to_csv(csv_path, index=False)
+        summary["snow_summary_csv"] = str(csv_path)
         # Also try JSON (records)
-        snow_cat.to_json(OUT_DIR / "snow_summary.json", orient="records", force_ascii=False)
-        summary["snow_summary_json"] = str(OUT_DIR / "snow_summary.json")
+        snow_cat.to_json(json_path, orient="records", force_ascii=False)
+        summary["snow_summary_json"] = str(json_path)
 
     # Export dynamic forecast data if available
     if dynamic_forecast_data:
         print(f"Exporting {len(dynamic_forecast_data)} periods")
         dynamic_df = pd.DataFrame(dynamic_forecast_data)
-        dynamic_df.to_csv(OUT_DIR / "dynamic_forecast.csv", index=False)
-        dynamic_df.to_json(OUT_DIR / "dynamic_forecast.json",
-                          orient="records", force_ascii=False, indent=2)
-        summary["dynamic_forecast_csv"] = str(OUT_DIR / "dynamic_forecast.csv")
-        summary["dynamic_forecast_json"] = str(OUT_DIR / 
-                                               "dynamic_forecast.json")
+        dyn_csv = OUT_DIR / f"dynamic_forecast{elevation_suffix}.csv"
+        dyn_json = OUT_DIR / f"dynamic_forecast{elevation_suffix}.json"
+        dynamic_df.to_csv(dyn_csv, index=False)
+        dynamic_df.to_json(dyn_json, orient="records", 
+                          force_ascii=False, indent=2)
+        summary["dynamic_forecast_csv"] = str(dyn_csv)
+        summary["dynamic_forecast_json"] = str(dyn_json)
 
     # Export hourly forecast data if available
     if hourly_forecast_data:
         print(f"Exporting {len(hourly_forecast_data)} hourly periods")
         hourly_df = pd.DataFrame(hourly_forecast_data)
-        hourly_df.to_csv(OUT_DIR / "hourly_forecast.csv", index=False)
-        hourly_df.to_json(OUT_DIR / "hourly_forecast.json",
-                         orient="records", force_ascii=False, indent=2)
-        summary["hourly_forecast_csv"] = str(OUT_DIR / "hourly_forecast.csv")
-        summary["hourly_forecast_json"] = str(OUT_DIR / "hourly_forecast.json")
+        hourly_csv = OUT_DIR / f"hourly_forecast{elevation_suffix}.csv"
+        hourly_json = OUT_DIR / f"hourly_forecast{elevation_suffix}.json"
+        hourly_df.to_csv(hourly_csv, index=False)
+        hourly_df.to_json(hourly_json, orient="records", 
+                         force_ascii=False, indent=2)
+        summary["hourly_forecast_csv"] = str(hourly_csv)
+        summary["hourly_forecast_json"] = str(hourly_json)
 
     meta = {
         "saved_tables": all_paths,
         "summary": summary,
     }
-    (OUT_DIR / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    meta_file = OUT_DIR / f"meta{elevation_suffix}.json"
+    meta_file.write_text(json.dumps(meta, indent=2), encoding="utf-8")
     return meta
+
+def scrape_elevation(page, elevation_name, elevation_url):
+    """Scrape forecast data from a specific elevation"""
+    print(f"Scraping {elevation_name} elevation: {elevation_url}")
+    
+    # Navigate to the specific elevation
+    page.goto(elevation_url, wait_until="domcontentloaded")
+    
+    # Let dynamic content render a bit (ads/JS). Increase if needed.
+    page.wait_for_timeout(1500)
+    # If content loads async, try "networkidle" as a fallback:
+    try:
+        page.wait_for_load_state("networkidle", timeout=5000)
+    except PWTimeout:
+        pass
+
+    html = page.content()
+    print(f"{elevation_name} HTML content length: {len(html)} characters")
+    
+    # Check if we're still on a login page
+    if "login" in page.url.lower() or "member[user_name]" in html:
+        print(f"WARNING: Still on login page for {elevation_name}!")
+        return None
+    else:
+        print(f"Successfully loaded {elevation_name} forecast page")
+    
+    # Save raw HTML for debugging
+    (OUT_DIR / f"raw_forecast_{elevation_name}.html").write_text(
+        html, encoding="utf-8")
+    
+    # Extract both regular tables and dynamic forecast data
+    dfs = extract_tables(html)
+    
+    # Extract dynamic forecast data from the interactive table
+    soup = BeautifulSoup(html, "lxml")
+    dynamic_forecast_data = extract_dynamic_forecast_data(soup)
+    print(f"Extracted {len(dynamic_forecast_data)} dynamic periods for {elevation_name}")
+    
+    # Extract hourly forecast data by clicking the hourly button
+    hourly_forecast_data = extract_hourly_forecast_data(page)
+    
+    return {
+        'elevation': elevation_name,
+        'url': elevation_url,
+        'tables': dfs,
+        'dynamic_forecast': dynamic_forecast_data,
+        'hourly_forecast': hourly_forecast_data,
+        'html_length': len(html)
+    }
+
 
 def main():
     with sync_playwright() as p:
@@ -549,45 +614,49 @@ def main():
             context_args["storage_state"] = STORAGE
         context = browser.new_context(**context_args)
 
-        # Ensure we're logged in and get the authenticated page
+        # Ensure we're logged in using the default TARGET_URL (mid)
         page = ensure_login(context)
 
-        # Now fetch the content using the authenticated page
-        # Let dynamic content render a bit (ads/JS). Increase if needed.
-        page.wait_for_timeout(1500)
-        # If content loads async, try "networkidle" as a fallback:
-        try:
-            page.wait_for_load_state("networkidle", timeout=5000)
-        except PWTimeout:
-            pass
-
-        html = page.content()
-        print(f"HTML content length: {len(html)} characters")
+        # Scrape data from all three elevations
+        all_elevation_data = {}
         
-        # Check if we're still on a login page
-        if "login" in page.url.lower() or "member[user_name]" in html:
-            print("WARNING: Still on login page or redirected to login!")
-        else:
-            print("Successfully loaded forecast page")
+        for elevation_name, elevation_url in ELEVATIONS.items():
+            elevation_data = scrape_elevation(page, elevation_name, elevation_url)
+            if elevation_data:
+                all_elevation_data[elevation_name] = elevation_data
+                
+                # Export individual elevation data
+                meta = tidy_and_export(
+                    elevation_data['tables'],
+                    elevation_data['dynamic_forecast'], 
+                    elevation_data['hourly_forecast'],
+                    elevation_suffix=f"_{elevation_name}"
+                )
+                print(f"Exported {elevation_name} data: {json.dumps(meta, indent=2)}")
         
-        # Save raw HTML for debugging
-        (OUT_DIR / "raw_forecast.html").write_text(html, encoding="utf-8")
+        # Create combined summary
+        combined_meta = {
+            'scrape_time': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'elevations_scraped': list(all_elevation_data.keys()),
+            'elevation_data': {}
+        }
         
-        # Extract both regular tables and dynamic forecast data
-        dfs = extract_tables(html)
+        for elevation, data in all_elevation_data.items():
+            combined_meta['elevation_data'][elevation] = {
+                'url': data['url'],
+                'html_length': data['html_length'],
+                'dynamic_periods': len(data['dynamic_forecast']),
+                'hourly_periods': len(data['hourly_forecast']),
+                'tables_found': len(data['tables'])
+            }
         
-        # Extract dynamic forecast data from the interactive table
-        soup = BeautifulSoup(html, "lxml")
-        dynamic_forecast_data = extract_dynamic_forecast_data(soup)
-        print(f"Extracted {len(dynamic_forecast_data)} dynamic periods")
+        # Save combined metadata
+        (OUT_DIR / "combined_meta.json").write_text(
+            json.dumps(combined_meta, indent=2), encoding="utf-8")
         
-        # Extract hourly forecast data by clicking the hourly button
-        hourly_forecast_data = extract_hourly_forecast_data(page)
+        print("=== COMBINED SCRAPING SUMMARY ===")
+        print(json.dumps(combined_meta, indent=2))
         
-        meta = tidy_and_export(dfs, dynamic_forecast_data, 
-                               hourly_forecast_data)
-
-        print(json.dumps(meta, indent=2))
         page.close()
         context.close()
         browser.close()

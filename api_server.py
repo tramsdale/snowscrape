@@ -112,8 +112,111 @@ async def get_dynamic_forecast():
 
 @app.get("/forecast/hourly")
 async def get_hourly_forecast():
-    """Get hourly forecast data"""
-    return load_json_file("hourly_forecast.json")
+    """Get hourly forecast data (mid elevation)"""
+    return load_json_file("hourly_forecast_mid.json")
+
+# Elevation-specific endpoints
+@app.get("/forecast/{elevation}")
+async def get_forecast_by_elevation(elevation: str):
+    """Get forecast data for specific elevation (top, mid, bot)"""
+    if elevation not in ['top', 'mid', 'bot']:
+        raise HTTPException(status_code=400, 
+                          detail="Elevation must be 'top', 'mid', or 'bot'")
+    
+    try:
+        # Try to load elevation-specific data
+        data = {
+            'elevation': elevation,
+            'dynamic_forecast': load_json_file(f"dynamic_forecast_{elevation}.json"),
+            'hourly_forecast': load_json_file(f"hourly_forecast_{elevation}.json"),
+            'snow_summary': load_json_file(f"snow_summary_{elevation}.json"),
+            'meta': load_json_file(f"meta_{elevation}.json")
+        }
+        return data
+    except HTTPException as e:
+        # If elevation-specific files don't exist, check for legacy files
+        if elevation == 'mid':
+            return {
+                'elevation': elevation,
+                'dynamic_forecast': load_json_file("dynamic_forecast.json"),
+                'hourly_forecast': load_json_file("hourly_forecast.json"),
+                'snow_summary': load_json_file("snow_summary.json"),
+                'meta': load_json_file("meta.json")
+            }
+        else:
+            raise HTTPException(status_code=404, 
+                              detail=f"No data available for {elevation} elevation")
+
+@app.get("/forecast/{elevation}/hourly")
+async def get_hourly_forecast_by_elevation(elevation: str):
+    """Get hourly forecast data for specific elevation"""
+    if elevation not in ['top', 'mid', 'bot']:
+        raise HTTPException(status_code=400, 
+                          detail="Elevation must be 'top', 'mid', or 'bot'")
+    
+    try:
+        return load_json_file(f"hourly_forecast_{elevation}.json")
+    except HTTPException:
+        if elevation == 'mid':
+            return load_json_file("hourly_forecast.json")
+        else:
+            raise HTTPException(status_code=404, 
+                              detail=f"No hourly data for {elevation} elevation")
+
+@app.get("/forecast/{elevation}/dynamic")
+async def get_dynamic_forecast_by_elevation(elevation: str):
+    """Get dynamic forecast data for specific elevation"""
+    if elevation not in ['top', 'mid', 'bot']:
+        raise HTTPException(status_code=400, 
+                          detail="Elevation must be 'top', 'mid', or 'bot'")
+    
+    try:
+        return load_json_file(f"dynamic_forecast_{elevation}.json")
+    except HTTPException:
+        if elevation == 'mid':
+            return load_json_file("dynamic_forecast.json")
+        else:
+            raise HTTPException(status_code=404, 
+                              detail=f"No dynamic data for {elevation} elevation")
+
+
+@app.get("/forecast/all-elevations")
+async def get_all_elevations():
+    """Get forecast data for all available elevations"""
+    elevations = {}
+    
+    for elevation in ['top', 'mid', 'bot']:
+        try:
+            elevation_data = {
+                'dynamic_forecast': load_json_file(f"dynamic_forecast_{elevation}.json"),
+                'hourly_forecast': load_json_file(f"hourly_forecast_{elevation}.json"),
+                'snow_summary': load_json_file(f"snow_summary_{elevation}.json"),
+                'meta': load_json_file(f"meta_{elevation}.json")
+            }
+            elevations[elevation] = elevation_data
+        except HTTPException:
+            # If elevation-specific files don't exist and it's mid, try legacy
+            if elevation == 'mid':
+                try:
+                    elevations[elevation] = {
+                        'dynamic_forecast': load_json_file("dynamic_forecast.json"),
+                        'hourly_forecast': load_json_file("hourly_forecast.json"),
+                        'snow_summary': load_json_file("snow_summary.json"),
+                        'meta': load_json_file("meta.json")
+                    }
+                except HTTPException:
+                    pass
+    
+    if not elevations:
+        raise HTTPException(status_code=404, 
+                          detail="No elevation data available")
+    
+    return {
+        'elevations': list(elevations.keys()),
+        'data': elevations,
+        'combined_meta': load_json_file("combined_meta.json") if 
+                        (DATA_DIR / "combined_meta.json").exists() else None
+    }
 
 @app.get("/forecast/html", response_class=HTMLResponse)
 async def get_html_forecast(request: Request):
