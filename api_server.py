@@ -17,8 +17,25 @@ from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from multiple possible locations
+load_dotenv()  # Try default locations first
+
+# Also try to load from project directory explicitly
+project_dir = Path(__file__).parent
+env_file = project_dir / ".env"
+if env_file.exists():
+    load_dotenv(env_file)
+
+# Manual fallback for cases where dotenv doesn't work
+if not os.getenv('OPENAI_API_KEY') and env_file.exists():
+    with open(env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                # Remove quotes if present
+                value = value.strip('\'"')
+                os.environ[key] = value
 
 app = FastAPI(
     title="Snow Forecast API",
@@ -92,12 +109,23 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    meta_info = get_file_info("meta.json")
+    try:
+        # Try to load a small file to test data access
+        test_file = DATA_DIR / "meta.json"
+        if test_file.exists():
+            status = "healthy"
+        else:
+            status = "no data"
+    except:
+        status = "error"
+    
+    # Check OpenAI API key availability (without exposing it)
+    has_openai_key = bool(os.getenv('OPENAI_API_KEY'))
+    
     return {
-        "status": "healthy",
-        "data_available": meta_info["exists"],
-        "last_updated": meta_info.get("modified"),
-        "timestamp": datetime.now().isoformat()
+        "status": status, 
+        "timestamp": datetime.now().isoformat(),
+        "openai_configured": has_openai_key
     }
 
 @app.get("/meta")
