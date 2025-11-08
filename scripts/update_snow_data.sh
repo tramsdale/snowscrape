@@ -51,12 +51,22 @@ else
     exit 1
 fi
 
-# Run the scraper
+# Run the actual scraper (not the placeholder main.py)
 log "Running scraper..."
-if python main.py >> "$LOG_FILE" 2>&1; then
-    log "Scraper completed successfully"
-    
-    # Check if output files were created
+# Try the installed script first, fallback to module
+if command -v scrape >/dev/null 2>&1; then
+    if scrape >> "$LOG_FILE" 2>&1; then
+        log "Scraper completed successfully"
+    else
+        log "ERROR: Scraper failed with exit code $?"
+        exit 1
+    fi
+else
+    log "ERROR: Scraper failed with exit code $?"
+    exit 1
+fi
+
+# Check if output files were created
     if [ -f "out_snow/meta.json" ]; then
         # Use cross-platform date command instead of stat
         if command -v stat >/dev/null 2>&1; then
@@ -76,10 +86,6 @@ if python main.py >> "$LOG_FILE" 2>&1; then
         
         log "Data last updated: $LAST_UPDATE"
     fi
-else
-    log "ERROR: Scraper failed with exit code $?"
-    exit 1
-fi
 
 # Log file sizes for monitoring
 log "Output file sizes:"
