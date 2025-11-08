@@ -115,7 +115,128 @@ async def get_hourly_forecast():
     """Get hourly forecast data (mid elevation)"""
     return load_json_file("hourly_forecast_mid.json")
 
-# Elevation-specific endpoints
+@app.get("/forecast/all-elevations")
+async def get_all_elevations():
+    """Get forecast data for all available elevations"""
+    elevations = {}
+    
+    for elevation in ['top', 'mid', 'bot']:
+        try:
+            elevation_data = {
+                'dynamic_forecast': load_json_file(f"dynamic_forecast_{elevation}.json"),
+                'hourly_forecast': load_json_file(f"hourly_forecast_{elevation}.json"),
+                'snow_summary': load_json_file(f"snow_summary_{elevation}.json"),
+                'meta': load_json_file(f"meta_{elevation}.json")
+            }
+            elevations[elevation] = elevation_data
+        except HTTPException:
+            # If elevation-specific files don't exist and it's mid, try legacy
+            if elevation == 'mid':
+                try:
+                    elevations[elevation] = {
+                        'dynamic_forecast': load_json_file("dynamic_forecast.json"),
+                        'hourly_forecast': load_json_file("hourly_forecast.json"),
+                        'snow_summary': load_json_file("snow_summary.json"),
+                        'meta': load_json_file("meta.json")
+                    }
+                except HTTPException:
+                    pass
+    
+    if not elevations:
+        raise HTTPException(status_code=404, 
+                          detail="No elevation data available")
+    
+    # Also include combined metadata
+    try:
+        combined_meta = load_json_file("combined_meta.json")
+        return {
+            'elevations': elevations,
+            'combined_meta': combined_meta,
+            'elevations_available': list(elevations.keys())
+        }
+    except HTTPException:
+        return {
+            'elevations': elevations,
+            'elevations_available': list(elevations.keys())
+        }
+
+@app.get("/forecast/html", response_class=HTMLResponse)
+async def get_html_forecast(request: Request):
+    """Get beautifully styled HTML forecast featuring ChatGPT analysis"""
+    try:
+        # Try elevation-specific files first, fallback to legacy
+        try:
+            hourly_data = load_json_file("hourly_forecast_mid.json")
+        except HTTPException:
+            hourly_data = load_json_file("hourly_forecast.json")
+        
+        # Try to get cached ChatGPT forecast first
+        chatgpt_forecast = get_cached_or_generate_forecast(hourly_data)
+        
+        # Determine base URL from request
+        base_url = str(request.base_url).rstrip('/')
+        
+        # Create beautiful ski-themed HTML with ChatGPT as the star
+        html_content = create_ski_themed_forecast_html(
+            hourly_data, chatgpt_forecast, base_url
+        )
+        
+        return HTMLResponse(content=html_content)
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating HTML forecast: {str(e)}")
+
+@app.get("/forecast/generate")
+async def generate_ski_forecast():
+    """Generate HTML and Markdown ski forecast using ChatGPT"""
+    try:
+        # Import the forecast generator
+        from src.snowscrape.forecast_generator import SkiForecastGenerator
+        
+        # Check if OpenAI API key is available
+        api_key = os.getenv('OPENAI_API_KEY')
+        if not api_key:
+            raise HTTPException(
+                status_code=500, 
+                detail="OpenAI API key not configured. Set OPENAI_API_KEY environment variable."
+            )
+        
+        # Create generator
+        generator = SkiForecastGenerator(openai_api_key=api_key)
+        
+        if not generator.client:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to initialize OpenAI client"
+            )
+        
+        # Load elevation-specific forecast data
+        hourly_data = generator.load_hourly_forecast(str(DATA_DIR))
+        
+        # Generate forecasts with ChatGPT
+        forecasts = generator.generate_forecast_with_chatgpt(hourly_data)
+        
+        if not forecasts:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate forecasts with ChatGPT"
+            )
+        
+        return {
+            'status': 'success',
+            'forecasts': forecasts,
+            'generated_at': datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating forecast: {str(e)}"
+        )
+
+# Elevation-specific endpoints (must come after specific routes)
 @app.get("/forecast/{elevation}")
 async def get_forecast_by_elevation(elevation: str):
     """Get forecast data for specific elevation (top, mid, bot)"""
@@ -178,71 +299,6 @@ async def get_dynamic_forecast_by_elevation(elevation: str):
         else:
             raise HTTPException(status_code=404, 
                               detail=f"No dynamic data for {elevation} elevation")
-
-
-@app.get("/forecast/all-elevations")
-async def get_all_elevations():
-    """Get forecast data for all available elevations"""
-    elevations = {}
-    
-    for elevation in ['top', 'mid', 'bot']:
-        try:
-            elevation_data = {
-                'dynamic_forecast': load_json_file(f"dynamic_forecast_{elevation}.json"),
-                'hourly_forecast': load_json_file(f"hourly_forecast_{elevation}.json"),
-                'snow_summary': load_json_file(f"snow_summary_{elevation}.json"),
-                'meta': load_json_file(f"meta_{elevation}.json")
-            }
-            elevations[elevation] = elevation_data
-        except HTTPException:
-            # If elevation-specific files don't exist and it's mid, try legacy
-            if elevation == 'mid':
-                try:
-                    elevations[elevation] = {
-                        'dynamic_forecast': load_json_file("dynamic_forecast.json"),
-                        'hourly_forecast': load_json_file("hourly_forecast.json"),
-                        'snow_summary': load_json_file("snow_summary.json"),
-                        'meta': load_json_file("meta.json")
-                    }
-                except HTTPException:
-                    pass
-    
-    if not elevations:
-        raise HTTPException(status_code=404, 
-                          detail="No elevation data available")
-    
-    return {
-        'elevations': list(elevations.keys()),
-        'data': elevations,
-        'combined_meta': load_json_file("combined_meta.json") if 
-                        (DATA_DIR / "combined_meta.json").exists() else None
-    }
-
-@app.get("/forecast/html", response_class=HTMLResponse)
-async def get_html_forecast(request: Request):
-    """Get beautifully styled HTML forecast featuring ChatGPT analysis"""
-    try:
-        # Try elevation-specific files first, fallback to legacy
-        try:
-            hourly_data = load_json_file("hourly_forecast_mid.json")
-        except HTTPException:
-            hourly_data = load_json_file("hourly_forecast.json")
-        
-        # Try to get cached ChatGPT forecast first
-        chatgpt_forecast = get_cached_or_generate_forecast(hourly_data)
-        
-        # Determine base URL from request
-        base_url = str(request.base_url).rstrip('/')
-        
-        # Create beautiful ski-themed HTML with ChatGPT as the star
-        html_content = create_ski_themed_forecast_html(
-            hourly_data, chatgpt_forecast, base_url
-        )
-        
-        return HTMLResponse(content=html_content)
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating HTML forecast: {str(e)}")
 
 
 def get_cached_or_generate_forecast(hourly_data: List[Dict]) -> str:
@@ -607,76 +663,6 @@ async def download_file(filename: str):
         filename=filename,
         media_type='application/octet-stream'
     )
-
-
-@app.get("/forecast/generate")
-async def generate_ski_forecast():
-    """Generate HTML and Markdown ski forecast using ChatGPT"""
-    try:
-        # Import the forecast generator
-        from src.snowscrape.forecast_generator import SkiForecastGenerator
-        
-        # Check if OpenAI API key is available
-        api_key = os.getenv('OPENAI_API_KEY')
-        if not api_key:
-            raise HTTPException(
-                status_code=500, 
-                detail="OpenAI API key not configured. Set OPENAI_API_KEY environment variable."
-            )
-        
-        # Create generator
-        generator = SkiForecastGenerator(openai_api_key=api_key)
-        
-        if not generator.client:
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to initialize OpenAI client"
-            )
-        
-        # Check if hourly forecast data exists
-        hourly_file = DATA_DIR / "hourly_forecast.json"
-        if not hourly_file.exists():
-            raise HTTPException(
-                status_code=404,
-                detail="Hourly forecast data not found. Run scraper first."
-            )
-        
-        # Generate forecasts
-        forecasts = generator.generate_forecast(
-            data_dir=str(DATA_DIR),
-            save_output=True
-        )
-        
-        if not forecasts:
-            raise HTTPException(
-                status_code=500,
-                detail="Failed to generate forecasts with ChatGPT"
-            )
-        
-        # Return the generated forecasts
-        return {
-            "status": "success",
-            "message": "Ski forecast generated successfully",
-            "html": forecasts.get('html', ''),
-            "markdown": forecasts.get('markdown', ''),
-            "files": {
-                "html_file": forecasts.get('html_file'),
-                "markdown_file": forecasts.get('markdown_file'),
-                "raw_file": forecasts.get('raw_file')
-            },
-            "timestamp": datetime.now().isoformat()
-        }
-        
-    except ImportError as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Forecast generator module not available: {str(e)}"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error generating forecast: {str(e)}"
-        )
 
 
 @app.get("/static/ski-forecast.css")
