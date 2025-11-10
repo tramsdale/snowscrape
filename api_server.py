@@ -384,6 +384,9 @@ def get_cached_or_generate_forecast(hourly_data: List[Dict]) -> str:
                     elevation_data = generator.load_hourly_forecast(str(DATA_DIR))
                     forecasts = generator.generate_forecast_with_chatgpt(elevation_data)
                     if forecasts:
+                        # Save the forecast for caching
+                        saved_files = generator.save_forecasts(forecasts, "generated_forecasts")
+                        print(f"💾 Cached forecast saved: {saved_files.get('html_file')}")
                         return forecasts.get('html', '')
                 except FileNotFoundError:
                     # Fallback to legacy single-elevation data
@@ -392,6 +395,9 @@ def get_cached_or_generate_forecast(hourly_data: List[Dict]) -> str:
                     legacy_elevation_data = {'mid': hourly_data}
                     forecasts = generator.generate_forecast_with_chatgpt(legacy_elevation_data)
                     if forecasts:
+                        # Save the forecast for caching
+                        saved_files = generator.save_forecasts(forecasts, "generated_forecasts")
+                        print(f"💾 Cached forecast saved: {saved_files.get('html_file')}")
                         return forecasts.get('html', '')
     except Exception as e:
         print(f"Could not generate ChatGPT forecast: {e}")
