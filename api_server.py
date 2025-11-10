@@ -379,9 +379,20 @@ def get_cached_or_generate_forecast(hourly_data: List[Dict]) -> str:
         if api_key:
             generator = SkiForecastGenerator(openai_api_key=api_key)
             if generator.client:
-                forecasts = generator.generate_forecast_with_chatgpt(hourly_data)
-                if forecasts:
-                    return forecasts.get('html', '')
+                # Load multi-elevation data for the new generator
+                try:
+                    elevation_data = generator.load_hourly_forecast(str(DATA_DIR))
+                    forecasts = generator.generate_forecast_with_chatgpt(elevation_data)
+                    if forecasts:
+                        return forecasts.get('html', '')
+                except FileNotFoundError:
+                    # Fallback to legacy single-elevation data
+                    print("⚠️  No multi-elevation data found, using legacy format")
+                    # Convert single elevation data to multi-elevation format
+                    legacy_elevation_data = {'mid': hourly_data}
+                    forecasts = generator.generate_forecast_with_chatgpt(legacy_elevation_data)
+                    if forecasts:
+                        return forecasts.get('html', '')
     except Exception as e:
         print(f"Could not generate ChatGPT forecast: {e}")
     
