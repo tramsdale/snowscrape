@@ -655,7 +655,30 @@ def scrape_elevation(page, elevation_name, elevation_url):
 
 def main():
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        # Configure browser args for Lambda environment
+        launch_args = {
+            'headless': True,
+            'args': [
+                '--no-sandbox',
+                '--disable-setuid-sandbox', 
+                '--disable-dev-shm-usage',
+                '--disable-web-security',
+                '--disable-background-networking',
+                '--disable-background-timer-throttling',
+                '--disable-renderer-backgrounding',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-features=TranslateUI',
+                '--disable-ipc-flooding-protection',
+                '--single-process',
+                '--no-zygote'
+            ]
+        }
+        
+        # Check if we're in Lambda environment and adjust args
+        if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+            print("🔧 Running in Lambda environment - using optimized browser args")
+        
+        browser = p.chromium.launch(**launch_args)
         # Reuse cookies if present
         context_args = {}
         if pathlib.Path(STORAGE).exists():

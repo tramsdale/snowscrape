@@ -1,0 +1,12 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "sam-snowscape-app"
+resolve_s3 = true
+s3_prefix = "sam-snowscape-app"
+region = "eu-west-2"
+capabilities = "CAPABILITY_IAM"
+image_repositories = ["SnowForecastFunction=758655430746.dkr.ecr.eu-west-2.amazonaws.com/samsnowscapeappd8b56eef/snowforecastfunction9ae137bbrepo"]
+
+[default.global.parameters]
+region = "eu-west-2"

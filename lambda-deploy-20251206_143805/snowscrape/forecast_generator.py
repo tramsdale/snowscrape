@@ -126,7 +126,7 @@ class SkiForecastGenerator:
 
 {elevation_info}
 
-The uploaded JSON contains hourly forecast data for each elevation with date information. Use this data to provide elevation-specific recommendations and highlight differences between mountain elevations (e.g., better snow conditions at top, warmer temperatures at bottom, wind exposure at different levels).
+The uploaded JSON contains hourly forecast data for each elevation. Use this data to provide elevation-specific recommendations and highlight differences between mountain elevations (e.g., better snow conditions at top, warmer temperatures at bottom, wind exposure at different levels).
 
 Firstly, check whether the resort is open, and tailor your forecast accordingly.
 
@@ -137,8 +137,8 @@ Structure your forecast with these sections:
 - Next 7 Days (summary)
 
 For each day section, include:
-- Actual day of week and date in heading. Today is {datetime.now().strftime('%A, %B %d, %Y')}. 
-- Give responses for expert skiers looking for the best conditions.
+- Day of week and date in heading - IMPORTANT: Use the actual day_name and day_num from the JSON data (e.g., "Friday 6 Dec", "Saturday 7 Dec"), never use placeholders like "[Day of Week]" or "[Date]"
+- SKI DAY RATING: Give each day a star rating from 1-10 stars (⭐) where: 1⭐ = terrible day (pouring rain, no snow), 5⭐ = average skiing day, 10⭐ = epic bluebird powder day with sunshine and fresh snow. Display as "Ski Rating: ⭐⭐⭐⭐⭐⭐⭐ (7/10)" 
 - Conversational summary of skiing conditions with elevation-specific advice
 - Temperature ranges for different elevations
 - Snowfall amounts and timing, noting elevation differences  
@@ -146,6 +146,16 @@ For each day section, include:
 - Weather conditions at different elevations
 - Elevation-specific recommendations (top for powder, mid for groomers, etc.)
 - Special notes (avalanche risk, grooming status, etc.)
+
+CRITICAL: Always use the real dates from the forecast data, not placeholder text.
+
+STAR RATING CRITERIA:
+- 10⭐: Perfect bluebird powder day (fresh snow 15+cm, sunshine, light winds, cold temps)
+- 8-9⭐: Excellent conditions (good snow 8-15cm, mostly sunny, manageable wind)
+- 6-7⭐: Good skiing (some snow 3-8cm, mixed conditions, decent visibility)
+- 4-5⭐: Average day (little/no new snow, overcast, normal conditions)
+- 2-3⭐: Poor conditions (rain, warm temps, poor visibility, strong winds)
+- 1⭐: Terrible day (heavy rain, no snow, dangerous conditions)
 
 Use engaging ski language: pow, bluebird, corduroy, sick, etc.
 Use HTML formatting elements (headings, lists, bold) for the HTML version.
@@ -288,6 +298,9 @@ Format your response exactly as:
         html_text = '\n'.join(html_content).strip()
         markdown_text = '\n'.join(markdown_content).strip()
         
+        # Remove markdown code blocks from HTML content
+        html_text = self.clean_html_content(html_text)
+        
         # If parsing failed, try to split by common patterns
         if not html_text or not markdown_text:
             print("⚠️  Could not parse sections clearly, attempting "
@@ -300,6 +313,33 @@ Format your response exactly as:
             'raw': content
         }
     
+    def clean_html_content(self, html_text: str) -> str:
+        """
+        Remove markdown code blocks and other artifacts from HTML content.
+        
+        Args:
+            html_text: HTML content that may contain markdown artifacts
+            
+        Returns:
+            Cleaned HTML content
+        """
+        import re
+        
+        # Remove markdown code blocks (```html, ```, etc.)
+        html_text = re.sub(r'```html\s*\n?', '', html_text)
+        html_text = re.sub(r'```\s*\n?', '', html_text)
+        
+        # Remove any remaining backticks at start/end of lines
+        lines = html_text.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            # Skip lines that are just backticks
+            if line.strip() in ['```', '```html', '```markdown']:
+                continue
+            cleaned_lines.append(line)
+        
+        return '\n'.join(cleaned_lines).strip()
+
     def alternative_parse(self, content: str) -> Dict[str, str]:
         """
         Alternative parsing method if main parsing fails.
@@ -338,6 +378,8 @@ Format your response exactly as:
         
         if html_start != -1:
             html_content = content[html_start:html_end].strip()
+            # Clean HTML content of markdown artifacts
+            html_content = self.clean_html_content(html_content)
         
         if md_start != -1:
             markdown_content = content[md_start:].strip()
@@ -345,8 +387,9 @@ Format your response exactly as:
         # If we still can't parse, return the whole content for both
         if not html_content and not markdown_content:
             print("⚠️  Using full content for both HTML and Markdown")
+            cleaned_content = self.clean_html_content(content)
             return {
-                'html': content,
+                'html': cleaned_content,
                 'markdown': content,
                 'raw': content
             }
