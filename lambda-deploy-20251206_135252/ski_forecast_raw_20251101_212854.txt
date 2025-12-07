@@ -1,0 +1,64 @@
+## HTML Version
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ski Resort Weather Forecast</title>
+</head>
+<body>
+<h1>Ski Resort Weather Forecast</h1>
+<h2>Tomorrow</h2>
+<p>Date: 2025-11-02</p>
+<p>Weather: Light snow</p>
+<p>Temperature: 2°C (Max), 2°C (Min)</p>
+<p>Wind: 10 km/h, WSW</p>
+<p>Snow Amount: 0.6 cm</p>
+<p>Rain Amount: —</p>
+<p>Freezing Level: 1950 m</p>
+<p>General Skiing Conditions: Light snowfall, good for skiing.</p>
+
+<h2>Next 7 Days Forecast</h2>
+<p>Date: 2025-11-03</p>
+<p>Weather: Clear</p>
+<p>Temperature: 1°C (Max), 1°C (Min)</p>
+<p>Wind: 5 km/h, N</p>
+<p>Snow Amount: 1.1 cm</p>
+<p>Rain Amount: —</p>
+<p>Freezing Level: 1750 m</p>
+<p>General Skiing Conditions: Light snow, suitable for skiing.</p>
+
+<!-- Repeat the above structure for the next 6 days -->
+
+</body>
+</html>
+```
+
+## Markdown Version
+```markdown
+# Ski Resort Weather Forecast
+
+## Tomorrow
+- **Date:** 2025-11-02
+- **Weather:** Light snow
+- **Temperature:** 2°C (Max), 2°C (Min)
+- **Wind:** 10 km/h, WSW
+- **Snow Amount:** 0.6 cm
+- **Rain Amount:** —
+- **Freezing Level:** 1950 m
+- **General Skiing Conditions:** Light snowfall, good for skiing.
+
+## Next 7 Days Forecast
+- **Date:** 2025-11-03
+- **Weather:** Clear
+- **Temperature:** 1°C (Max), 1°C (Min)
+- **Wind:** 5 km/h, N
+- **Snow Amount:** 1.1 cm
+- **Rain Amount:** —
+- **Freezing Level:** 1750 m
+- **General Skiing Conditions:** Light snow, suitable for skiing.
+
+<!-- Repeat the above structure for the next 6 days -->
+```
+Please note that the forecast details need to be repeated for each day in the 7-day forecast.

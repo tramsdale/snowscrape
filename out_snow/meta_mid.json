@@ -1,0 +1,15 @@
+{
+  "saved_tables": [
+    "out_snow/table_1_mid.csv",
+    "out_snow/table_2_mid.csv",
+    "out_snow/table_3_mid.csv"
+  ],
+  "summary": {
+    "snow_summary_csv": "out_snow/snow_summary_mid.csv",
+    "snow_summary_json": "out_snow/snow_summary_mid.json",
+    "dynamic_forecast_csv": "out_snow/dynamic_forecast_mid.csv",
+    "dynamic_forecast_json": "out_snow/dynamic_forecast_mid.json",
+    "hourly_forecast_csv": "out_snow/hourly_forecast_mid.csv",
+    "hourly_forecast_json": "out_snow/hourly_forecast_mid.json"
+  }
+}

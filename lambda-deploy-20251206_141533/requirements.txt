@@ -1,0 +1,15 @@
+# Lambda-optimized requirements - prefer binary wheels
+playwright>=1.47.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+# Use a more compatible pandas version
+pandas>=2.1.0,<2.3.0
+python-dotenv>=1.0.0
+openai>=1.50.0
+fastapi>=0.110.0
+uvicorn>=0.30.0
+python-multipart>=0.0.20
+mangum>=0.19.0
+requests>=2.31.0
+# Pin numpy to avoid compilation issues
+numpy>=1.24.0,<2.0.0

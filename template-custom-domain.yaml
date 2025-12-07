@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'Snow Forecast API with custom domain snow.tcla.me'
+
+Parameters:
+  OpenAIApiKey:
+    Type: String
+    Description: OpenAI API Key
+    NoEcho: true
+  DomainName:
+    Type: String
+    Default: snow.tcla.me
+    Description: Custom domain name
+  CertificateArn:
+    Type: String
+    Description: ACM Certificate ARN (must be in us-east-1 for CloudFront)
+  HostedZoneId:
+    Type: String
+    Description: Route53 Hosted Zone ID for tcla.me (optional)
+    Default: ""
+
+Conditions:
+  HasHostedZone: !Not [!Equals [!Ref HostedZoneId, ""]]
+
+Resources:
+  SnowForecastFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Timeout: 300
+      MemorySize: 2048
+      Environment:
+        Variables:
+          OPENAI_API_KEY: !Ref OpenAIApiKey
+          PLAYWRIGHT_BROWSERS_PATH: /tmp
+          PYTHONPATH: /var/task
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ServerlessRestApi
+            Path: /{proxy+}
+            Method: any
+        RootEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ServerlessRestApi
+            Path: /
+            Method: any
+    Metadata:
+      DockerTag: python3.12-v1
+      DockerContext: ./
+      Dockerfile: Dockerfile
+
+  ServerlessRestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Domain:
+        DomainName: !Ref DomainName
+        CertificateArn: !Ref CertificateArn
+        Route53:
+          HostedZoneId: !If [HasHostedZone, !Ref HostedZoneId, !Ref "AWS::NoValue"]
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  CustomDomainUrl:
+    Description: "Custom domain URL"
+    Value: !Sub "https://${DomainName}/"
+  FunctionName:
+    Description: "Lambda Function Name"
+    Value: !Ref SnowForecastFunction

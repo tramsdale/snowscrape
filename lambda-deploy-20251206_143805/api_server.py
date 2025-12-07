@@ -610,7 +610,7 @@ def create_ski_themed_forecast_html(hourly_data: List[Dict],
             </div>
             
             <div class="hourly-table">
-                <h2>📊 Supporting Data: Detailed Hourly Forecast</h2>
+                <h2>📊 Supporting Data: Detailed Multi-Elevation Forecast</h2>
                 <div style="overflow-x: auto; max-height: 600px; overflow-y: auto;">
                     <table>
                         <thead style="position: sticky; top: 0; z-index: 10;">
@@ -618,9 +618,11 @@ def create_ski_themed_forecast_html(hourly_data: List[Dict],
                                 <th>Date</th>
                                 <th>Time</th>
                                 <th>Weather</th>
-                                <th>Snow</th>
-                                <th>Rain</th>
-                                <th>Temp (°C)</th>
+                                <th style="background-color: #e3f2fd;">Snow</th>
+                                <th style="background-color: #e8f5e8;">Rain</th>
+                                <th style="background-color: #fff3e0;">Temp Top (°C)</th>
+                                <th style="background-color: #fff3e0;">Temp Mid (°C)</th>
+                                <th style="background-color: #fff3e0;">Temp Bot (°C)</th>
                                 <th>Wind</th>
                                 <th>Humidity</th>
                             </tr>
@@ -642,8 +644,87 @@ def create_ski_themed_forecast_html(hourly_data: List[Dict],
         current_month = datetime.now().strftime('%b')
         date_display = f"{period.get('day_name', '')} {period.get('day_num', '')} {current_month}"
         
+        # Snow cell styling - blue background for snow amounts
+        snow_style = 'style="background-color: #e3f2fd; font-weight: bold;"' if snow_display != '—' else 'style="background-color: #f9f9f9;"'
+        
+        # Rain cell styling - green background for rain amounts
+        rain_style = 'style="background-color: #e8f5e8; font-weight: bold;"' if rain_display != '—' else 'style="background-color: #f9f9f9;"'
+        
         html += f"""
                         <tr>
+                            <td><strong>{date_display}</strong></td>
+                            <td><strong>{period.get('time_period', '')}</strong></td>
+                            <td>{period.get('weather_phrase', '')}</td>
+                            <td class="snow-amount" {snow_style}>{snow_display}</td>
+                            <td class="rain-amount" {rain_style}>{rain_display}</td>
+                            <td style="background-color: #fff3e0;">{period.get('temperature_max', '—')}°</td>
+                            <td style="background-color: #fff3e0;">{period.get('temperature_max', '—')}°</td>
+                            <td style="background-color: #fff3e0;">{period.get('temperature_max', '—')}°</td>
+                            <td>{period.get('wind_speed_display', '')} {period.get('wind_direction', '')}</td>
+                            <td>{period.get('humidity', '')}%</td>
+                        </tr>
+        """
+    
+    html += f"""
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="hourly-table" style="margin-top: 30px;">
+                <h2>⏰ Peak Hours Focus: 9am-4pm Ski Schedule</h2>
+                <div style="overflow-x: auto; max-height: 600px; overflow-y: auto;">
+                    <table>
+                        <thead style="position: sticky; top: 0; z-index: 10;">
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Weather</th>
+                                <th>Snow</th>
+                                <th>Rain</th>
+                                <th>Temp (°C)</th>
+                                <th>Wind</th>
+                                <th>Humidity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+    """
+    
+    # Add second table with 9am-4pm highlighting
+    for period in hourly_data[:40]:  # Show first 40 periods for better coverage
+        snow_display = period.get('snow_amount', '—')
+        if snow_display != '—':
+            snow_display += 'cm'
+            
+        rain_display = period.get('rain_amount', '—')
+        if rain_display != '—':
+            rain_display += 'mm'
+        
+        # Create clear date display with full date
+        current_month = datetime.now().strftime('%b')
+        date_display = f"{period.get('day_name', '')} {period.get('day_num', '')} {current_month}"
+        
+        # Check if time is between 9am-4pm for highlighting
+        time_period = period.get('time_period', '')
+        is_peak_hours = False
+        
+        # Parse time to check if it's between 9am-4pm
+        if 'am' in time_period.lower() or 'pm' in time_period.lower():
+            try:
+                time_str = time_period.replace(' ', '').lower()
+                if 'am' in time_str:
+                    hour = int(time_str.replace('am', ''))
+                    is_peak_hours = hour >= 9
+                elif 'pm' in time_str:
+                    hour = int(time_str.replace('pm', ''))
+                    is_peak_hours = hour <= 4
+            except:
+                pass
+        
+        # Set row background for peak hours
+        row_style = 'style="background-color: #e8f5e8;"' if is_peak_hours else ''
+        
+        html += f"""
+                        <tr {row_style}>
                             <td><strong>{date_display}</strong></td>
                             <td><strong>{period.get('time_period', '')}</strong></td>
                             <td>{period.get('weather_phrase', '')}</td>

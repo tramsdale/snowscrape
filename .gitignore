@@ -60,3 +60,9 @@ out_snow/*.csv
 *.bak
 *~
 generated_forecasts
+
+# Deployment credentials (never commit these!)
+.env.deploy
+.env.local
+*.env.deploy
+*.env.local

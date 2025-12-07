@@ -1,0 +1,59 @@
+date,day_name,day_num,time_period,period_index,weather_icon,weather_icon_src,weather_phrase,wind_speed,wind_direction,wind_speed_display,snow_amount,rain_amount,temperature_max,temperature_min,temperature_chill,humidity,freezing_level
+2025-11-08,Sat,8,10 AM,0,clear,/packs/components/weather-icon/static/dayclear-67420c1b6b3deadc194e3d819a95fd68.svg,clear,0.0,NNE,0,—,—,7,7,7,52,2500
+2025-11-08,Sat,8,1 PM,1,clear,/packs/components/weather-icon/static/dayclear-67420c1b6b3deadc194e3d819a95fd68.svg,clear,5.0,NW,5,—,—,9,9,9,59,2450
+2025-11-08,Sat,8,4 PM,2,clear,/packs/components/weather-icon/static/dayclear-67420c1b6b3deadc194e3d819a95fd68.svg,clear,5.0,NNW,5,—,—,7,7,6,73,2300
+2025-11-08,Sat,8,7 PM,3,part cloud,/packs/components/weather-icon/static/nightpartcloud-dd0403ac3780911d72b7f255003b3934.svg,some clouds,5.0,ENE,5,—,—,4,4,4,81,2150
+2025-11-08,Sat,8,10 PM,4,part cloud,/packs/components/weather-icon/static/nightpartcloud-dd0403ac3780911d72b7f255003b3934.svg,some clouds,5.0,E,5,—,—,3,3,3,83,2050
+2025-11-09,Sunday,9,1 AM,5,part cloud,/packs/components/weather-icon/static/nightpartcloud-dd0403ac3780911d72b7f255003b3934.svg,some clouds,5.0,ENE,5,—,—,4,4,4,81,2100
+2025-11-09,Sunday,9,4 AM,6,part cloud,/packs/components/weather-icon/static/nightpartcloud-dd0403ac3780911d72b7f255003b3934.svg,some clouds,5.0,E,5,—,—,3,3,3,82,2000
+2025-11-09,Sunday,9,7 AM,7,part cloud,/packs/components/weather-icon/static/nightpartcloud-dd0403ac3780911d72b7f255003b3934.svg,some clouds,5.0,ESE,5,—,—,2,2,2,84,1900
+2025-11-09,Sunday,9,10 AM,8,part cloud,/packs/components/weather-icon/static/daypartcloud-973480e82c9244eb4057b69770a99995.svg,some clouds,5.0,ENE,5,—,—,6,6,6,77,2150
+2025-11-09,Sunday,9,1 PM,9,part cloud,/packs/components/weather-icon/static/daypartcloud-973480e82c9244eb4057b69770a99995.svg,some clouds,5.0,NNE,5,—,—,8,8,8,68,2300
+2025-11-09,Sunday,9,4 PM,10,part cloud,/packs/components/weather-icon/static/daypartcloud-973480e82c9244eb4057b69770a99995.svg,some clouds,5.0,N,5,—,—,7,7,6,76,2250
+2025-11-09,Sunday,9,7 PM,11,part cloud,/packs/components/weather-icon/static/nightpartcloud-dd0403ac3780911d72b7f255003b3934.svg,some clouds,5.0,ENE,5,—,—,5,5,5,83,2250
+2025-11-09,Sunday,9,10 PM,12,part cloud,/packs/components/weather-icon/static/nightpartcloud-dd0403ac3780911d72b7f255003b3934.svg,some clouds,0.0,ESE,0,—,—,4,4,4,81,2300
+2025-11-10,Monday,10,1 AM,13,clear,/packs/components/weather-icon/static/nightclear-df4275ae4966694e68f88c837c9b8a11.svg,clear,5.0,SE,5,—,—,3,3,3,78,2400
+2025-11-10,Monday,10,4 AM,14,clear,/packs/components/weather-icon/static/nightclear-df4275ae4966694e68f88c837c9b8a11.svg,clear,5.0,SE,5,—,—,3,3,3,75,2350
+2025-11-10,Monday,10,7 AM,15,clear,/packs/components/weather-icon/static/nightclear-df4275ae4966694e68f88c837c9b8a11.svg,clear,5.0,SE,5,—,—,2,2,2,72,2400
+2025-11-10,Monday,10,10 AM,16,part cloud,/packs/components/weather-icon/static/daypartcloud-973480e82c9244eb4057b69770a99995.svg,some clouds,0.0,SW,0,—,—,7,7,7,61,2600
+2025-11-10,Monday,10,1 PM,17,clear,/packs/components/weather-icon/static/dayclear-67420c1b6b3deadc194e3d819a95fd68.svg,clear,5.0,WSW,5,—,—,9,9,9,57,2700
+2025-11-10,Monday,10,4 PM,18,part cloud,/packs/components/weather-icon/static/daypartcloud-973480e82c9244eb4057b69770a99995.svg,some clouds,5.0,W,5,—,—,8,8,8,71,2600
+2025-11-10,Monday,10,7 PM,19,cloud,/packs/components/weather-icon/static/nightcloud-987e021dffc572a219863ec8c87cfb8f.svg,cloudy,5.0,SSW,5,—,—,5,5,4,75,2500
+2025-11-10,Monday,10,10 PM,20,clear,/packs/components/weather-icon/static/nightclear-df4275ae4966694e68f88c837c9b8a11.svg,clear,5.0,S,5,—,—,4,4,3,61,2450
+2025-11-11,Tuesday,11,1 AM,21,part cloud,/packs/components/weather-icon/static/nightpartcloud-dd0403ac3780911d72b7f255003b3934.svg,some clouds,5.0,S,5,—,—,4,4,4,51,2400
+2025-11-11,Tuesday,11,4 AM,22,clear,/packs/components/weather-icon/static/nightclear-df4275ae4966694e68f88c837c9b8a11.svg,clear,5.0,SSE,5,—,—,4,4,3,41,2450
+2025-11-11,Tuesday,11,7 AM,23,clear,/packs/components/weather-icon/static/nightclear-df4275ae4966694e68f88c837c9b8a11.svg,clear,5.0,SE,5,—,—,3,3,3,38,2500
+2025-11-11,Tuesday,11,10 AM,24,clear,/packs/components/weather-icon/static/dayclear-67420c1b6b3deadc194e3d819a95fd68.svg,clear,0.0,SSE,0,—,—,8,8,8,38,2650
+2025-11-11,Tuesday,11,1 PM,25,clear,/packs/components/weather-icon/static/dayclear-67420c1b6b3deadc194e3d819a95fd68.svg,clear,5.0,WSW,5,—,—,11,11,11,43,2750
+2025-11-11,Tuesday,11,4 PM,26,clear,/packs/components/weather-icon/static/dayclear-67420c1b6b3deadc194e3d819a95fd68.svg,clear,0.0,WSW,0,—,—,9,9,9,55,2750
+2025-11-11,Tuesday,11,7 PM,27,part cloud,/packs/components/weather-icon/static/nightpartcloud-dd0403ac3780911d72b7f255003b3934.svg,some clouds,5.0,SSE,5,—,—,6,6,5,51,2750
+2025-11-11,Tuesday,11,10 PM,28,part cloud,/packs/components/weather-icon/static/nightpartcloud-dd0403ac3780911d72b7f255003b3934.svg,some clouds,5.0,SSE,5,—,—,6,6,5,44,2950
+2025-11-12,Wednesday,12,1 AM,29,clear,/packs/components/weather-icon/static/nightclear-df4275ae4966694e68f88c837c9b8a11.svg,clear,5.0,SSE,5,—,—,6,6,5,40,3050
+2025-11-12,Wednesday,12,4 AM,30,clear,/packs/components/weather-icon/static/nightclear-df4275ae4966694e68f88c837c9b8a11.svg,clear,5.0,SE,5,—,—,6,6,5,37,3100
+2025-11-12,Wednesday,12,7 AM,31,part cloud,/packs/components/weather-icon/static/nightpartcloud-dd0403ac3780911d72b7f255003b3934.svg,some clouds,5.0,SSE,5,—,—,5,5,3,35,3200
+2025-11-12,Wednesday,12,10 AM,32,clear,/packs/components/weather-icon/static/dayclear-67420c1b6b3deadc194e3d819a95fd68.svg,clear,5.0,SSE,5,—,—,10,10,9,34,3350
+2025-11-12,Wednesday,12,1 PM,33,part cloud,/packs/components/weather-icon/static/daypartcloud-973480e82c9244eb4057b69770a99995.svg,some clouds,5.0,SSW,5,—,—,14,14,14,37,3500
+2025-11-12,Wednesday,12,4 PM,34,part cloud,/packs/components/weather-icon/static/daypartcloud-973480e82c9244eb4057b69770a99995.svg,some clouds,5.0,SSE,5,—,—,11,11,11,51,3550
+2025-11-12,Wednesday,12,7 PM,35,clear,/packs/components/weather-icon/static/nightclear-df4275ae4966694e68f88c837c9b8a11.svg,clear,5.0,SSE,5,—,—,8,8,7,45,3600
+2025-11-12,Wednesday,12,10 PM,36,clear,/packs/components/weather-icon/static/nightclear-df4275ae4966694e68f88c837c9b8a11.svg,clear,10.0,SSE,10,—,—,7,7,6,39,3650
+2025-11-13,Thursday,13,AM,37,clear,/packs/components/weather-icon/static/dayclear-67420c1b6b3deadc194e3d819a95fd68.svg,clear,10.0,SSE,10,—,—,16,13,12,29,3450
+2025-11-13,Thursday,13,PM,38,clear,/packs/components/weather-icon/static/dayclear-67420c1b6b3deadc194e3d819a95fd68.svg,clear,5.0,S,5,—,—,14,11,10,42,3500
+2025-11-13,Thursday,13,night,39,part cloud,/packs/components/weather-icon/static/nightpartcloud-dd0403ac3780911d72b7f255003b3934.svg,some clouds,10.0,SSE,10,—,—,10,9,7,32,3600
+2025-11-14,Friday,14,AM,40,cloud,/packs/components/weather-icon/static/daycloud-66ca1933047188b18f06b6e6c1c551a7.svg,cloudy,10.0,SE,10,—,—,14,12,11,40,3650
+2025-11-14,Friday,14,PM,41,cloud,/packs/components/weather-icon/static/daycloud-66ca1933047188b18f06b6e6c1c551a7.svg,cloudy,10.0,SE,10,—,—,11,8,6,53,3400
+2025-11-14,Friday,14,night,42,rain showers,/packs/components/weather-icon/static/nightrainshowers-fdd5239348f6e287492f6f267438893a.svg,rain shwrs,10.0,SE,10,—,1.0,8,6,4,73,2750
+2025-11-15,Saturday,15,AM,43,cloud,/packs/components/weather-icon/static/daycloud-66ca1933047188b18f06b6e6c1c551a7.svg,cloudy,5.0,SE,5,—,—,12,9,8,68,3050
+2025-11-15,Saturday,15,PM,44,part cloud,/packs/components/weather-icon/static/daypartcloud-973480e82c9244eb4057b69770a99995.svg,some clouds,5.0,SSE,5,—,—,10,7,5,61,3050
+2025-11-15,Saturday,15,night,45,cloud,/packs/components/weather-icon/static/nightcloud-987e021dffc572a219863ec8c87cfb8f.svg,cloudy,10.0,SE,10,—,—,6,6,4,64,3250
+2025-11-16,Sunday,16,AM,46,part cloud,/packs/components/weather-icon/static/daypartcloud-973480e82c9244eb4057b69770a99995.svg,some clouds,10.0,SE,10,—,—,12,9,8,61,3250
+2025-11-16,Sunday,16,PM,47,light rain,/packs/components/weather-icon/static/daylightrain-11a7b5cdcd4f411a691a7fa4f016160b.svg,light rain,5.0,SE,5,—,1.0,9,7,7,68,2600
+2025-11-16,Sunday,16,night,48,rain showers,/packs/components/weather-icon/static/nightrainshowers-fdd5239348f6e287492f6f267438893a.svg,rain shwrs,10.0,SSE,10,—,11.0,5,4,2,90,2050
+2025-11-17,Monday,17,AM,49,part cloud,/packs/components/weather-icon/static/daypartcloud-973480e82c9244eb4057b69770a99995.svg,some clouds,5.0,S,5,—,—,10,8,8,70,2450
+2025-11-17,Monday,17,PM,50,cloud,/packs/components/weather-icon/static/daycloud-66ca1933047188b18f06b6e6c1c551a7.svg,cloudy,0.0,NNW,0,—,—,8,6,6,84,2600
+2025-11-17,Monday,17,night,51,cloud,/packs/components/weather-icon/static/nightcloud-987e021dffc572a219863ec8c87cfb8f.svg,cloudy,5.0,SE,5,—,—,5,4,2,71,2550
+2025-11-18,Tuesday,18,AM,52,cloud,/packs/components/weather-icon/static/daycloud-66ca1933047188b18f06b6e6c1c551a7.svg,cloudy,5.0,SE,5,—,—,9,8,7,68,2900
+2025-11-18,Tuesday,18,PM,53,cloud,/packs/components/weather-icon/static/daycloud-66ca1933047188b18f06b6e6c1c551a7.svg,cloudy,10.0,ESE,10,—,—,8,5,3,77,3050
+2025-11-18,Tuesday,18,night,54,rain showers,/packs/components/weather-icon/static/nightrainshowers-fdd5239348f6e287492f6f267438893a.svg,rain shwrs,5.0,S,5,—,5.0,4,3,2,91,2250
+2025-11-19,Wednesday,19,AM,55,light rain,/packs/components/weather-icon/static/daylightrain-11a7b5cdcd4f411a691a7fa4f016160b.svg,light rain,5.0,SSW,5,—,2.0,6,5,5,76,2100
+2025-11-19,Wednesday,19,PM,56,light rain,/packs/components/weather-icon/static/daylightrain-11a7b5cdcd4f411a691a7fa4f016160b.svg,light rain,5.0,WSW,5,—,3.0,4,4,3,98,1900
+2025-11-19,Wednesday,19,night,57,heavy rain,/packs/components/weather-icon/static/nightheavyrain-ce639d188c3f3f659f105d333f02c28e.svg,heavy rain,5.0,SSW,5,—,11.0,4,2,1,95,1750

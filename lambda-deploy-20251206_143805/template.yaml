@@ -4,17 +4,17 @@ Description: 'Snow Forecast API with Docker container on AWS Lambda - Debug Sche
 
 Parameters:
   OpenAIApiKey:
-    Type: String
-    Description: OpenAI API Key
-    NoEcho: true
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: OpenAI API Key from Parameter Store
+    Default: /snowscrape/openai-api-key
   SnowUser:
-    Type: String
-    Description: Snow Forecast login username
-    NoEcho: true
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Snow Forecast login username from Parameter Store
+    Default: /snowscrape/snow-user
   SnowPass:
-    Type: String
-    Description: Snow Forecast login password
-    NoEcho: true
+    Type: AWS::SSM::Parameter::Value<String>
+    Description: Snow Forecast login password from Parameter Store
+    Default: /snowscrape/snow-pass
 
 Resources:
   SnowForecastFunction:

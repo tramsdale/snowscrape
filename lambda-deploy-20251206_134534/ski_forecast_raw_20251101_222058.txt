@@ -1,0 +1,181 @@
+## HTML Version
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ski Forecast</title>
+</head>
+<body>
+<h1>Tomorrow</h1>
+<h2>Sunday, November 2</h2>
+<ul>
+  <li>Temperature Range: 3°C / 7°C</li>
+  <li>Snowfall: Light rain in the morning (2.0 cm), light snow in the evening (1.4 cm)</li>
+  <li>Wind: 10 km/h from SW in the morning, shifting to WSW in the evening</li>
+  <li>Weather: Light rain in the morning, light snow in the evening</li>
+  <li>Special Notes: Be prepared for changing conditions throughout the day</li>
+  <li>Best Conditions: Fresh snow for powder lovers</li>
+</ul>
+
+<h1>Day after Tomorrow</h1>
+<h2>Monday, November 3</h2>
+<ul>
+  <li>Temperature Range: 0°C / 4°C</li>
+  <li>Snowfall: Light snow in the early morning (1.1 cm), snow showers mid-morning (0.1 cm)</li>
+  <li>Wind: Light winds from W to N</li>
+  <li>Weather: Light snow and snow showers</li>
+  <li>Special Notes: Watch out for icy patches on the slopes</li>
+  <li>Best Conditions: Fresh snow for backcountry adventurers</li>
+</ul>
+
+<h1>Next 7 Days</h1>
+<h2>Tuesday, November 4</h2>
+<ul>
+  <li>Temperature Range: 2°C / 10°C</li>
+  <li>Snowfall: Light snow in the morning (1.1 cm)</li>
+  <li>Wind: Light winds from W to SSW</li>
+  <li>Weather: Clear skies</li>
+  <li>Special Notes: Perfect day for groomers and carving</li>
+  <li>Best Conditions: Corduroy heaven for all skiers</li>
+</ul>
+
+<h2>Wednesday, November 5</h2>
+<ul>
+  <li>Temperature Range: 3°C / 12°C</li>
+  <li>Snowfall: No snowfall expected</li>
+  <li>Wind: Light winds from SSE to S</li>
+  <li>Weather: Clear skies with some clouds</li>
+  <li>Special Notes: Enjoy the sunny weather on the slopes</li>
+  <li>Best Conditions: Bluebird day for all types of skiing</li>
+</ul>
+
+<h2>Thursday, November 6</h2>
+<ul>
+  <li>Temperature Range: 4°C / 7°C</li>
+  <li>Snowfall: No snowfall expected</li>
+  <li>Wind: Light winds from SSE to ENE</li>
+  <li>Weather: Cloudy skies</li>
+  <li>Special Notes: Overcast conditions may persist</li>
+  <li>Best Conditions: Groomed runs for smooth cruising</li>
+</ul>
+
+<h2>Friday, November 7</h2>
+<ul>
+  <li>Temperature Range: 4°C / 7°C</li>
+  <li>Snowfall: No snowfall expected</li>
+  <li>Wind: Light winds from S to W</li>
+  <li>Weather: Clear skies in the evening</li>
+  <li>Special Notes: Clearing up for a nice end to the week</li>
+  <li>Best Conditions: Sunset skiing under clear skies</li>
+</ul>
+
+<h2>Saturday, November 8</h2>
+<ul>
+  <li>Temperature Range: 3°C / 6°C</li>
+  <li>Snowfall: No snowfall expected</li>
+  <li>Wind: Light winds from SE to ENE</li>
+  <li>Weather: Cloudy skies</li>
+  <li>Special Notes: Cloud cover may persist</li>
+  <li>Best Conditions: Enjoy the mountain views on a cloudy day</li>
+</ul>
+
+<h2>Sunday, November 9</h2>
+<ul>
+  <li>Temperature Range: 3°C / 6°C</li>
+  <li>Snowfall: No snowfall expected</li>
+  <li>Wind: Light winds from ESE to NE</li>
+  <li>Weather: Clear skies</li>
+  <li>Special Notes: Sunny day for some late fall skiing</li>
+  <li>Best Conditions: Last chance for some autumn turns</li>
+</ul>
+
+<h2>Monday, November 10</h2>
+<ul>
+  <li>Temperature Range: 4°C / 7°C</li>
+  <li>Snowfall: No snowfall expected</li>
+  <li>Wind: Light winds from S to SSE</li>
+  <li>Weather: Cloudy skies with rain showers in the afternoon</li>
+  <li>Special Notes: Rain showers may affect visibility</li>
+  <li>Best Conditions: Morning skiing before the showers</li>
+</ul>
+</body>
+</html>
+
+## Markdown Version
+
+### Tomorrow
+#### Sunday, November 2
+- Temperature Range: 3°C / 7°C
+- Snowfall: Light rain in the morning (2.0 cm), light snow in the evening (1.4 cm)
+- Wind: 10 km/h from SW in the morning, shifting to WSW in the evening
+- Weather: Light rain in the morning, light snow in the evening
+- Special Notes: Be prepared for changing conditions throughout the day
+- Best Conditions: Fresh snow for powder lovers
+
+### Day after Tomorrow
+#### Monday, November 3
+- Temperature Range: 0°C / 4°C
+- Snowfall: Light snow in the early morning (1.1 cm), snow showers mid-morning (0.1 cm)
+- Wind: Light winds from W to N
+- Weather: Light snow and snow showers
+- Special Notes: Watch out for icy patches on the slopes
+- Best Conditions: Fresh snow for backcountry adventurers
+
+### Next 7 Days
+#### Tuesday, November 4
+- Temperature Range: 2°C / 10°C
+- Snowfall: Light snow in the morning (1.1 cm)
+- Wind: Light winds from W to SSW
+- Weather: Clear skies
+- Special Notes: Perfect day for groomers and carving
+- Best Conditions: Corduroy heaven for all skiers
+
+#### Wednesday, November 5
+- Temperature Range: 3°C / 12°C
+- Snowfall: No snowfall expected
+- Wind: Light winds from SSE to S
+- Weather: Clear skies with some clouds
+- Special Notes: Enjoy the sunny weather on the slopes
+- Best Conditions: Bluebird day for all types of skiing
+
+#### Thursday, November 6
+- Temperature Range: 4°C / 7°C
+- Snowfall: No snowfall expected
+- Wind: Light winds from SSE to ENE
+- Weather: Cloudy skies
+- Special Notes: Overcast conditions may persist
+- Best Conditions: Groomed runs for smooth cruising
+
+#### Friday, November 7
+- Temperature Range: 4°C / 7°C
+- Snowfall: No snowfall expected
+- Wind: Light winds from S to W
+- Weather: Clear skies in the evening
+- Special Notes: Clearing up for a nice end to the week
+- Best Conditions: Sunset skiing under clear skies
+
+#### Saturday, November 8
+- Temperature Range: 3°C / 6°C
+- Snowfall: No snowfall expected
+- Wind: Light winds from SE to ENE
+- Weather: Cloudy skies
+- Special Notes: Cloud cover may persist
+- Best Conditions: Enjoy the mountain views on a cloudy day
+
+#### Sunday, November 9
+- Temperature Range: 3°C / 6°C
+- Snowfall: No snowfall expected
+- Wind: Light winds from ESE to NE
+- Weather: Clear skies
+- Special Notes: Sunny day for some late fall skiing
+- Best Conditions: Last chance for some autumn turns
+
+#### Monday, November 10
+- Temperature Range: 4°C / 7°C
+- Snowfall: No snowfall expected
+- Wind: Light winds from S to SSE
+- Weather: Cloudy skies with rain showers in the afternoon
+- Special Notes: Rain showers may affect visibility
+- Best Conditions: Morning skiing before the showers

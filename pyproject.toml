@@ -5,15 +5,20 @@ description = "Login-aware Snow-Forecast scraper (Avoriaz 12-day mid) with CSV/J
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-  "playwright",
-  "beautifulsoup4",
-  "lxml",
-  "pandas",
-  "python-dotenv",
-  "openai>=2.6.1",
+  "playwright>=1.48.0",
+  "beautifulsoup4>=4.12.3",
+  "lxml>=5.3.0",
+  "pandas>=2.2.3",
+  "python-dotenv>=1.0.1",
+  "openai>=1.52.2",
   "fastapi>=0.120.4",
-  "uvicorn>=0.38.0",
+  "uvicorn>=0.32.1",
   "python-multipart>=0.0.20",
+]
+
+[project.optional-dependencies]
+lambda = [
+  "mangum>=0.19.0",
 ]
 
 [project.scripts]

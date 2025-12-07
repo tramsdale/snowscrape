@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'Snow Forecast API with Docker container on AWS Lambda'
+
+Parameters:
+  OpenAIApiKey:
+    Type: String
+    Description: OpenAI API Key
+    NoEcho: true
+
+Resources:
+  SnowForecastFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Timeout: 300  # 5 minutes for web scraping
+      MemorySize: 2048  # More memory for Playwright
+      Environment:
+        Variables:
+          OPENAI_API_KEY: !Ref OpenAIApiKey
+          PLAYWRIGHT_BROWSERS_PATH: /opt/playwright
+          PYTHONPATH: /var/task:/var/task/src
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: any
+        RootEvent:
+          Type: Api
+          Properties:
+            Path: /
+            Method: any
+    Metadata:
+      DockerTag: python3.11-v1
+      DockerContext: ./
+      Dockerfile: Dockerfile
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  FunctionName:
+    Description: "Lambda Function Name"
+    Value: !Ref SnowForecastFunction
